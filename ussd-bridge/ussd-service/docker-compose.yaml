@@ -1,0 +1,64 @@
+version: '3.8'
+
+# TrustLedger USSD Bridge - Docker Compose
+# Runs the USSD service + Redis session store
+
+networks:
+  ussd-net:
+    name: ussd-net
+
+services:
+
+  # ─── Redis (USSD Session Store) ──────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: trustledger-ussd-redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - ussd-net
+
+  # ─── USSD Bridge Service ──────────────────────────────────────────────────────
+  ussd-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trustledger-ussd-service
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV:          production
+      PORT:              4000
+      BACKEND_API_URL:   ${BACKEND_API_URL:-http://host.docker.internal:3000/api/v1}
+      BACKEND_API_KEY:   ${BACKEND_API_KEY:-change-me}
+      AT_USERNAME:       ${AT_USERNAME:-sandbox}
+      AT_API_KEY:        ${AT_API_KEY:-}
+      AT_SHORTCODE:      ${AT_SHORTCODE:-*234#}
+      REDIS_URL:         redis://redis:6379
+      REDIS_SESSION_TTL: 120
+      LOG_LEVEL:         info
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - ussd-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  redis-data:

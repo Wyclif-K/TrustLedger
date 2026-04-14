@@ -1,0 +1,120 @@
+// =============================================================================
+// TrustLedger - Prisma Schema (PostgreSQL off-chain database)
+// Stores user sessions, auth credentials, and profile data.
+// The blockchain is the source of truth for all financial transactions.
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User (mirrors blockchain member, stores auth data) ──────────────────────
+model User {
+  id           String    @id @default(uuid())
+  memberId     String    @unique              // Links to blockchain MEMBER key
+  email        String    @unique
+  phone        String    @unique
+  passwordHash String
+  fullName     String
+  nationalId   String    @unique
+  role         Role      @default(MEMBER)
+  status       UserStatus @default(ACTIVE)
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  lastLoginAt  DateTime?
+
+  // Relations
+  sessions     Session[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+// ─── Session (JWT refresh token store) ───────────────────────────────────────
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  deviceInfo   String?
+  ipAddress    String?
+  expiresAt    DateTime
+  isRevoked    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─── Audit Log (off-chain record of API actions) ──────────────────────────────
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String
+  resource   String
+  resourceId String?
+  ipAddress  String?
+  userAgent  String?
+  statusCode Int
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ─── Notification (in-app and SMS notifications) ─────────────────────────────
+model Notification {
+  id         String             @id @default(uuid())
+  memberId   String
+  type       NotificationType
+  title      String
+  message    String
+  channel    NotificationChannel @default(IN_APP)
+  isRead     Boolean            @default(false)
+  sentAt     DateTime?
+  createdAt  DateTime           @default(now())
+
+  @@index([memberId])
+  @@map("notifications")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+enum Role {
+  MEMBER
+  ADMIN
+  AUDITOR
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum NotificationType {
+  DEPOSIT
+  WITHDRAWAL
+  LOAN_APPROVED
+  LOAN_REJECTED
+  LOAN_DISBURSED
+  LOAN_REPAYMENT
+  LOAN_DUE_REMINDER
+  GENERAL
+}
+
+enum NotificationChannel {
+  IN_APP
+  SMS
+  BOTH
+}

@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">TrustLedger</string>
+    <!-- Fallback when BuildConfig.API_BASE_URL is empty. Prefer TRUSTLEDGER_API_BASE_URL in local.properties (see app/build.gradle.kts). -->
+    <string name="api_base_url">http://192.168.1.100:3000/api/v1/</string>
+    <string name="api_timeout_usb_tip">On a physical phone: open the same /api/v1/health URL in Chrome here — if it hangs, the phone cannot reach your PC (wrong IP, different Wi‑Fi, or firewall).\n\nUSB cable to this PC: on the PC run adb reverse tcp:3000 tcp:3000 — then set the base URL to http://127.0.0.1:3000/api/v1/ and tap Test connection.\n\nOn Windows, allow inbound TCP port 3000 (Node.js) in Windows Defender Firewall for Private networks.</string>
+    <string name="login_network_hint">Check the server address below before signing in. On a real phone it must be your PC’s LAN IP (ipconfig), not localhost. Same Wi‑Fi as the PC, or USB with adb reverse. Allow TCP 3000 in Windows Firewall. Tap Test connection to verify.</string>
+    <string name="notification_channel_name">TrustLedger updates</string>
+    <string name="notification_channel_description">Loan and savings alerts from your group</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_subtitle">Loans &amp; savings</string>
+    <string name="notifications_empty">No notifications yet</string>
+    <string name="notifications_mark_all_read">Mark all read</string>
+    <string name="notifications_new_update">New update</string>
+    <string name="notifications_tap_to_view">Open the app to read details</string>
+    <string name="cd_notifications">Notifications</string>
+    <string name="cd_unread_notifications">Unread notifications</string>
+</resources>

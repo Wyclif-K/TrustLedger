@@ -1,0 +1,8 @@
+{
+  "index": {
+    "fields": ["docType", "memberId", "appliedAt"]
+  },
+  "ddoc": "indexLoanMemberAppliedAt",
+  "name": "indexLoanMemberAppliedAt",
+  "type": "json"
+}

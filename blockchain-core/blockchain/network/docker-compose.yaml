@@ -1,0 +1,195 @@
+# TrustLedger - Hyperledger Fabric Docker Network
+# Spins up: 1 Orderer, 2 Peers, 1 CA, 1 CouchDB per peer
+
+networks:
+  trustledger-net:
+    name: trustledger-net
+
+volumes:
+  orderer.trustledger.com:
+  peer0.sacco.trustledger.com:
+  peer1.sacco.trustledger.com:
+  couchdb0:
+  couchdb1:
+
+services:
+
+  # ─── Certificate Authority ───────────────────────────────────────────
+  ca.sacco.trustledger.com:
+    image: hyperledger/fabric-ca:1.5
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=ca-sacco
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_PORT=7054
+    ports:
+      - "7054:7054"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ./crypto-config/peerOrganizations/sacco.trustledger.com/ca/:/etc/hyperledger/fabric-ca-server-config
+    container_name: ca.sacco.trustledger.com
+    networks:
+      - trustledger-net
+
+  # ─── Orderer ─────────────────────────────────────────────────────────
+  orderer.trustledger.com:
+    container_name: orderer.trustledger.com
+    image: hyperledger/fabric-orderer:2.5
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+      - ./channel-artifacts/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./crypto-config/ordererOrganizations/trustledger.com/orderers/orderer.trustledger.com/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/trustledger.com/orderers/orderer.trustledger.com/tls/:/var/hyperledger/orderer/tls
+      - orderer.trustledger.com:/var/hyperledger/production/orderer
+    ports:
+      - "7050:7050"
+    networks:
+      - trustledger-net
+
+  # ─── CouchDB for Peer 0 ──────────────────────────────────────────────
+  couchdb0:
+    container_name: couchdb0
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - "5984:5984"
+    volumes:
+      - couchdb0:/opt/couchdb/data
+    networks:
+      - trustledger-net
+
+  # ─── Peer 0 (Primary) ────────────────────────────────────────────────
+  peer0.sacco.trustledger.com:
+    container_name: peer0.sacco.trustledger.com
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=trustledger-net
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.sacco.trustledger.com
+      - CORE_PEER_ADDRESS=peer0.sacco.trustledger.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.sacco.trustledger.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.sacco.trustledger.com:9051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.sacco.trustledger.com:7051
+      - CORE_PEER_LOCALMSPID=SaccoOrgMSP
+      # CouchDB state database
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/sacco.trustledger.com/peers/peer0.sacco.trustledger.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/sacco.trustledger.com/peers/peer0.sacco.trustledger.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.sacco.trustledger.com:/var/hyperledger/production
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - "7051:7051"
+    depends_on:
+      - couchdb0
+    networks:
+      - trustledger-net
+
+  # ─── CouchDB for Peer 1 ──────────────────────────────────────────────
+  couchdb1:
+    container_name: couchdb1
+    image: couchdb:3.3
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - "6984:5984"
+    volumes:
+      - couchdb1:/opt/couchdb/data
+    networks:
+      - trustledger-net
+
+  # ─── Peer 1 (Secondary / Endorser) ───────────────────────────────────
+  peer1.sacco.trustledger.com:
+    container_name: peer1.sacco.trustledger.com
+    image: hyperledger/fabric-peer:2.5
+    environment:
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=trustledger-net
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=false
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer1.sacco.trustledger.com
+      - CORE_PEER_ADDRESS=peer1.sacco.trustledger.com:9051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
+      - CORE_PEER_CHAINCODEADDRESS=peer1.sacco.trustledger.com:9052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.sacco.trustledger.com:9051
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.sacco.trustledger.com:7051
+      - CORE_PEER_LOCALMSPID=SaccoOrgMSP
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config/peerOrganizations/sacco.trustledger.com/peers/peer1.sacco.trustledger.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/sacco.trustledger.com/peers/peer1.sacco.trustledger.com/tls:/etc/hyperledger/fabric/tls
+      - peer1.sacco.trustledger.com:/var/hyperledger/production
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - "9051:9051"
+    depends_on:
+      - couchdb1
+    networks:
+      - trustledger-net
+
+  # ─── Fabric CLI (for channel setup and chaincode ops) ─────────────────
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools:2.5
+    tty: true
+    stdin_open: true
+    environment:
+      - GOPATH=/opt/gopath
+      - CORE_VM_ENDPOINT=unix:///host/var/run/docker.sock
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.sacco.trustledger.com:7051
+      - CORE_PEER_LOCALMSPID=SaccoOrgMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/sacco.trustledger.com/peers/peer0.sacco.trustledger.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/sacco.trustledger.com/peers/peer0.sacco.trustledger.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/sacco.trustledger.com/peers/peer0.sacco.trustledger.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/sacco.trustledger.com/users/Admin@sacco.trustledger.com/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash
+    volumes:
+      - /var/run/docker.sock:/host/var/run/docker.sock
+      - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/
+      - ./channel-artifacts:/opt/gopath/src/github.com/hyperledger/fabric/peer/channel-artifacts
+      - ../../chaincode:/opt/gopath/src/github.com/hyperledger/fabric/peer/chaincode
+    networks:
+      - trustledger-net

@@ -1,0 +1,34 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Squircle tile: gold (#FFB800) + thin navy border — matches admin dashboard header -->
+    <path
+        android:pathData="M30,18 L78,18 A12,12 0 0 1 90,30 L90,78 A12,12 0 0 1 78,90 L30,90 A12,12 0 0 1 18,78 L18,30 A12,12 0 0 1 30,18 Z"
+        android:fillColor="#FFB800"
+        android:strokeColor="#001529"
+        android:strokeWidth="2.25"
+        android:strokeLineJoin="round" />
+    <!-- Stylobate (base) -->
+    <path
+        android:fillColor="#001529"
+        android:pathData="M36,72 L72,72 L72,76 L36,76 Z" />
+    <!-- Four columns -->
+    <path
+        android:fillColor="#001529"
+        android:pathData="M40,44 L45,44 L45,72 L40,72 Z" />
+    <path
+        android:fillColor="#001529"
+        android:pathData="M48,44 L53,44 L53,72 L48,72 Z" />
+    <path
+        android:fillColor="#001529"
+        android:pathData="M56,44 L61,44 L61,72 L56,72 Z" />
+    <path
+        android:fillColor="#001529"
+        android:pathData="M64,44 L69,44 L69,72 L64,72 Z" />
+    <!-- Pediment -->
+    <path
+        android:fillColor="#001529"
+        android:pathData="M38,44 L54,29 L70,44 Z" />
+</vector>

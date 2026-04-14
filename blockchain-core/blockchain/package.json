@@ -1,0 +1,23 @@
+{
+  "name": "trustledger-chaincode",
+  "version": "1.0.0",
+  "description": "TrustLedger SACCO - Hyperledger Fabric Node.js Chaincode",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "fabric-chaincode-node start",
+    "test": "jest --coverage",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "fabric-contract-api": "^2.5.0",
+    "fabric-shim": "^2.5.0"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "eslint": "^8.0.0"
+  },
+  "license": "MIT"
+}

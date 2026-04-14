@@ -1,0 +1,33 @@
+# Local PostgreSQL for TrustLedger (required for API auth / Prisma).
+#
+#   npm run db:up
+#
+# Hyperledger Fabric runs separately (chaincode + peers):
+#   npm run fabric:up   (from this folder; starts ../blockchain/network/docker-compose.yaml)
+#
+# Then copy .env.example to .env, set JWT_SECRET, and run:
+#   npm run migrate
+#   npm run db:seed
+#   npm run dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: trustledger-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: trustledger
+      POSTGRES_PASSWORD: trustledger
+      POSTGRES_DB: trustledger
+    volumes:
+      - trustledger_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trustledger -d trustledger"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  trustledger_pgdata:

@@ -1,0 +1,18 @@
+# TrustLedger - Hyperledger Fabric Crypto Configuration
+# Defines the organizations, peers, and orderers in the network
+
+OrdererOrgs:
+  - Name: Orderer
+    Domain: trustledger.com
+    Specs:
+      - Hostname: orderer
+
+PeerOrgs:
+  # SACCO Organization - Main financial institution
+  - Name: SaccoOrg
+    Domain: sacco.trustledger.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2         # 2 peers for redundancy
+    Users:
+      Count: 3         # Admin, Member, Auditor
