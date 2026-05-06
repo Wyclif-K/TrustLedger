@@ -24,15 +24,22 @@ async function start() {
     // ── 2. Hyperledger Fabric (optional — see FABRIC_ENABLED in .env) ───────
     if (config.fabric.enabled) {
       logger.info('Connecting to Hyperledger Fabric...');
-      await fabricService.connect();
-      logger.info('Fabric network connected.');
-      const ep = config.fabric.peerEndpoint || '';
-      const host = ep.includes(':') ? ep.slice(0, ep.lastIndexOf(':')) : ep;
-      const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(host);
-      if (!isLocal) {
-        logger.info(
-          `Remote Fabric peer: ${ep} (TLS expects FABRIC_PEER_HOST_ALIAS=${config.fabric.peerHostAlias}). ` +
-            'Open VPS/AWS security group inbound TCP for that port from your API host (e.g. Railway); gRPC uses TLS.'
+      try {
+        await fabricService.connect();
+        logger.info('Fabric network connected.');
+        const ep = config.fabric.peerEndpoint || '';
+        const host = ep.includes(':') ? ep.slice(0, ep.lastIndexOf(':')) : ep;
+        const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(host);
+        if (!isLocal) {
+          logger.info(
+            `Remote Fabric peer: ${ep} (TLS expects FABRIC_PEER_HOST_ALIAS=${config.fabric.peerHostAlias}). ` +
+              'Open VPS/AWS security group inbound TCP for that port from your API host (e.g. Railway); gRPC uses TLS.'
+          );
+        }
+      } catch (fabricErr) {
+        logger.error(
+          'Fabric startup failed — HTTP stays up; blockchain routes return 503 until the peer is reachable and PEM/TLS match.',
+          fabricErr
         );
       }
     } else {

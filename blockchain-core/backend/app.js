@@ -34,12 +34,31 @@ app.use(
 );
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
-app.use(cors({
-  origin:      config.cors.origin,
+// Single-URL deploy: browsers send Origin=https://your-app.up.railway.app while CORS_ORIGIN may still say localhost —
+// allowing same hostname in production fixes that without weakening split-deploy (different admin vs API hostnames).
+app.use((req, res, next) => cors({
+  origin(origin, cb) {
+    const list = config.cors.allowedOriginList;
+    if (!origin) return cb(null, true);
+    if (list.includes(origin)) return cb(null, true);
+    if (
+      config.isProd &&
+      config.cors.sameHostProductionFallback &&
+      /^https:/i.test(origin)
+    ) {
+      try {
+        const u = new URL(origin);
+        if (String(u.hostname).toLowerCase() === String(req.hostname || '').toLowerCase()) {
+          return cb(null, true);
+        }
+      } catch (_) { /* noop */ }
+    }
+    cb(null, false);
+  },
   credentials: true,
   methods:     ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+})(req, res, next));
 
 // ─── Rate Limiting ────────────────────────────────────────────────────────────
 const limiter = rateLimit({

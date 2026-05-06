@@ -1,0 +1,5 @@
+# Use this folder as the Railway service Root Directory so COPY paths match the Dockerfile.
+# Prevents Gradle/Android detection when the repo also contains an Android project at root.
+# Single-URL deploy: keep default Dockerfile here; set Variables in Railway (see backend/.env.example Railway block).
+[build]
+builder = "dockerfile"

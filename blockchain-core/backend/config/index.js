@@ -29,12 +29,17 @@ function stripEnvQuotes(val) {
   return s;
 }
 
-function parseCorsOrigin() {
+/** Always returns an explicit list used by cors + same-host Railway fallback */
+function parseCorsOriginList() {
   const raw = optional('CORS_ORIGIN', 'http://localhost:5173');
   if (raw.includes(',')) {
     return raw.split(',').map((s) => s.trim()).filter(Boolean);
   }
-  return raw;
+  return [raw];
+}
+
+function corsSameHostProductionFallbackEnabled() {
+  return String(optional('CORS_SAMEHOST_FALLBACK', 'true')).toLowerCase() !== 'false';
 }
 
 function fabricEnabledFromEnv() {
@@ -183,7 +188,10 @@ const config = {
   },
 
   cors: {
-    origin: parseCorsOrigin(),
+    /** Explicit allowlist */
+    allowedOriginList: parseCorsOriginList(),
+    /** When NODE_ENV=production, also allow browser Origin if it matches Host (single Railway URL). Disable with CORS_SAMEHOST_FALLBACK=false. */
+    sameHostProductionFallback: corsSameHostProductionFallbackEnabled(),
   },
 
   logging: {
