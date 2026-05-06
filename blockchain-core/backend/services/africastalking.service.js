@@ -40,6 +40,7 @@ async function validateCredentials() {
         apiKey,
         'User-Agent': 'TrustLedgerBackend/1.0 (Node.js)',
       },
+      signal: AbortSignal.timeout(12000),
     });
     const rawText = await res.text();
     let data = {};

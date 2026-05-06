@@ -14,6 +14,53 @@ const atService     = require('./services/africastalking.service');
 
 let server;
 
+/**
+ * Railway / load balancers need the TCP listener up quickly.
+ * Fabric gRPC to a unreachable VPS peer or slow external HTTP can otherwise block listen() → 502 "Application failed to respond".
+ */
+async function connectFabricInBackground() {
+  if (!config.fabric.enabled) {
+    logger.warn(
+      'Hyperledger Fabric is disabled (FABRIC_ENABLED=false). PostgreSQL-backed auth works; blockchain routes return 503 until Fabric is enabled.'
+    );
+    return;
+  }
+  logger.info('Connecting to Hyperledger Fabric (background)...');
+  try {
+    await fabricService.connect();
+    logger.info('Fabric network connected.');
+    const ep = config.fabric.peerEndpoint || '';
+    const host = ep.includes(':') ? ep.slice(0, ep.lastIndexOf(':')) : ep;
+    const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(host);
+    if (!isLocal) {
+      logger.info(
+        `Remote Fabric peer: ${ep} (TLS expects FABRIC_PEER_HOST_ALIAS=${config.fabric.peerHostAlias}). ` +
+          'Open VPS/AWS security group inbound TCP for that port from your API host (e.g. Railway); gRPC uses TLS.'
+      );
+    }
+  } catch (fabricErr) {
+    logger.error(
+      'Fabric startup failed — HTTP stays up; blockchain routes return 503 until the peer is reachable and PEM/TLS match.',
+      fabricErr
+    );
+  }
+}
+
+async function validateATInBackground() {
+  if (!config.africasTalking.configured) {
+    logger.info(
+      'Africa\'s Talking: AT_USERNAME / AT_API_KEY not set — SMS API disabled; USSD callback still works if the route is reachable.'
+    );
+    return;
+  }
+  const at = await atService.validateCredentials();
+  if (at.ok) {
+    logger.info(`Africa's Talking: ${at.message}`);
+  } else {
+    logger.warn(`Africa's Talking credentials check failed: ${at.message}`);
+  }
+}
+
 async function start() {
   try {
     // ── 1. Connect to PostgreSQL ─────────────────────────────────────────────
@@ -21,46 +68,7 @@ async function start() {
     await prisma.$connect();
     logger.info('PostgreSQL connected.');
 
-    // ── 2. Hyperledger Fabric (optional — see FABRIC_ENABLED in .env) ───────
-    if (config.fabric.enabled) {
-      logger.info('Connecting to Hyperledger Fabric...');
-      try {
-        await fabricService.connect();
-        logger.info('Fabric network connected.');
-        const ep = config.fabric.peerEndpoint || '';
-        const host = ep.includes(':') ? ep.slice(0, ep.lastIndexOf(':')) : ep;
-        const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(host);
-        if (!isLocal) {
-          logger.info(
-            `Remote Fabric peer: ${ep} (TLS expects FABRIC_PEER_HOST_ALIAS=${config.fabric.peerHostAlias}). ` +
-              'Open VPS/AWS security group inbound TCP for that port from your API host (e.g. Railway); gRPC uses TLS.'
-          );
-        }
-      } catch (fabricErr) {
-        logger.error(
-          'Fabric startup failed — HTTP stays up; blockchain routes return 503 until the peer is reachable and PEM/TLS match.',
-          fabricErr
-        );
-      }
-    } else {
-      logger.warn(
-        'Hyperledger Fabric is disabled (FABRIC_ENABLED=false). PostgreSQL-backed auth works; blockchain routes return 503 until Fabric is enabled.'
-      );
-    }
-
-    if (config.africasTalking.configured) {
-      const at = await atService.validateCredentials();
-      if (at.ok) {
-        logger.info(`Africa's Talking: ${at.message}`);
-      } else {
-        logger.warn(`Africa's Talking credentials check failed: ${at.message}`);
-      }
-    } else {
-      logger.info('Africa\'s Talking: AT_USERNAME / AT_API_KEY not set — SMS API disabled; USSD callback still works if the route is reachable.');
-    }
-
-    // ── 3. Start HTTP Server ─────────────────────────────────────────────────
-    // Bind all interfaces so phones (hotspot / USB tether) can reach this PC by its tether IPv4.
+    // ── 2. Start HTTP Server first (critical for Railway / reverse proxies)
     server = app.listen(config.port, '0.0.0.0', () => {
       logger.info(`
 ╔══════════════════════════════════════════════════════╗
@@ -72,6 +80,11 @@ async function start() {
 ║  Prefix:  ${String(config.apiPrefix).padEnd(42)}║
 ╚══════════════════════════════════════════════════════╝
       `);
+      /** Defer outbound network so /api/v1/health answers immediately while Fabric/AT warm up */
+      setImmediate(() => {
+        connectFabricInBackground().catch((e) => logger.error('Fabric background connect error:', e));
+        validateATInBackground().catch((e) => logger.warn(`Africa's Talking credential check threw: ${e.message}`));
+      });
     });
 
   } catch (err) {
