@@ -4,6 +4,8 @@
 
 'use strict';
 
+const path        = require('path');
+const fs          = require('fs');
 const express     = require('express');
 const helmet      = require('helmet');
 const cors        = require('cors');
@@ -19,8 +21,17 @@ const logger  = require('./config/logger');
 
 const app = express();
 
+if (config.isProd) {
+  app.set('trust proxy', 1);
+}
+
 // ─── Security Headers ─────────────────────────────────────────────────────────
-app.use(helmet());
+app.use(
+  helmet({
+    /** Allow browsers to call this API from another origin (split admin + API); CORS still restricts which origins. */
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 app.use(cors({
@@ -58,6 +69,20 @@ if (config.isDev) {
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use(config.apiPrefix, routes);
+
+// ─── Admin SPA (production: Railway Docker serves same origin) ────────────────
+if (config.serveAdmin) {
+  const adminDist = path.join(__dirname, '..', 'admin-dashboard', 'dist');
+  const indexHtml = path.join(adminDist, 'index.html');
+  if (fs.existsSync(indexHtml)) {
+    app.use(express.static(adminDist));
+    app.use((req, res, next) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+      if (req.path.startsWith(config.apiPrefix)) return next();
+      res.sendFile(indexHtml, (err) => (err ? next(err) : undefined));
+    });
+  }
+}
 
 // ─── 404 & Error Handlers ────────────────────────────────────────────────────
 app.use(notFoundHandler);

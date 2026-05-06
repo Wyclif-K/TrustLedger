@@ -1,11 +1,96 @@
-import React from 'react'
-import { Outlet } from 'react-router-dom'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Outlet, useNavigate } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import { useAuthStore } from '@/store/auth.store'
 import NotificationDropdown from '@/components/notifications/NotificationDropdown'
+import { authApi } from '@/services/api'
+
+function parseEnvMinutes(value, fallbackMinutes) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallbackMinutes
+  return parsed
+}
+
+const IDLE_WARNING_MINUTES = parseEnvMinutes(import.meta.env.VITE_IDLE_WARNING_MINUTES, 10)
+const rawIdleLogoutMinutes = parseEnvMinutes(import.meta.env.VITE_IDLE_LOGOUT_MINUTES, 15)
+const IDLE_LOGOUT_MINUTES = Math.max(rawIdleLogoutMinutes, IDLE_WARNING_MINUTES + 1)
+
+const IDLE_WARNING_MS = IDLE_WARNING_MINUTES * 60 * 1000
+const IDLE_LOGOUT_MS = IDLE_LOGOUT_MINUTES * 60 * 1000
 
 export default function AppLayout() {
-  const { user } = useAuthStore()
+  const navigate = useNavigate()
+  const { user, logout } = useAuthStore()
+  const [showIdleWarning, setShowIdleWarning] = useState(false)
+  const [secondsRemaining, setSecondsRemaining] = useState(
+    Math.floor((IDLE_LOGOUT_MS - IDLE_WARNING_MS) / 1000)
+  )
+
+  const lastActivityRef = useRef(Date.now())
+  const warningTimerRef = useRef(null)
+  const logoutTimerRef = useRef(null)
+  const countdownTimerRef = useRef(null)
+
+  const clearTimers = useCallback(() => {
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current)
+    if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current)
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current)
+  }, [])
+
+  const performLogout = useCallback(async () => {
+    clearTimers()
+    setShowIdleWarning(false)
+    try {
+      await authApi.logout()
+    } catch {}
+    logout()
+    navigate('/login', { replace: true })
+  }, [clearTimers, logout, navigate])
+
+  const startCountdown = useCallback(() => {
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current)
+    countdownTimerRef.current = setInterval(() => {
+      const msLeft = IDLE_LOGOUT_MS - (Date.now() - lastActivityRef.current)
+      setSecondsRemaining(Math.max(0, Math.ceil(msLeft / 1000)))
+    }, 1000)
+  }, [])
+
+  const scheduleIdleTimers = useCallback(() => {
+    clearTimers()
+    const elapsed = Date.now() - lastActivityRef.current
+    const warningDelay = Math.max(0, IDLE_WARNING_MS - elapsed)
+    const logoutDelay = Math.max(0, IDLE_LOGOUT_MS - elapsed)
+
+    warningTimerRef.current = setTimeout(() => {
+      setShowIdleWarning(true)
+      startCountdown()
+    }, warningDelay)
+
+    logoutTimerRef.current = setTimeout(() => {
+      performLogout()
+    }, logoutDelay)
+  }, [clearTimers, performLogout, startCountdown])
+
+  const handleActivity = useCallback(() => {
+    lastActivityRef.current = Date.now()
+    if (showIdleWarning) setShowIdleWarning(false)
+    scheduleIdleTimers()
+  }, [scheduleIdleTimers, showIdleWarning])
+
+  useEffect(() => {
+    scheduleIdleTimers()
+    const events = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click']
+    events.forEach((eventName) => window.addEventListener(eventName, handleActivity, { passive: true }))
+
+    return () => {
+      events.forEach((eventName) => window.removeEventListener(eventName, handleActivity))
+      clearTimers()
+    }
+  }, [clearTimers, handleActivity, scheduleIdleTimers])
+
+  const staySignedIn = () => {
+    handleActivity()
+  }
 
   return (
     <div className="min-h-screen bg-surface-50 print:bg-white">
@@ -35,6 +120,31 @@ export default function AppLayout() {
         </header>
         <main className="p-6 print:p-4"><Outlet /></main>
       </div>
+
+      {showIdleWarning && (
+        <div className="fixed bottom-5 right-5 z-50 w-[min(92vw,360px)] rounded-xl border border-brand-300 bg-white shadow-xl shadow-navy-900/25 p-4 print:hidden">
+          <p className="text-sm font-semibold text-navy-900">Session timeout warning</p>
+          <p className="mt-1 text-xs text-navy-600 leading-relaxed">
+            You will be signed out due to inactivity in about {secondsRemaining}s.
+          </p>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={staySignedIn}
+              className="btn-primary !py-1.5 !px-3"
+            >
+              Stay signed in
+            </button>
+            <button
+              type="button"
+              onClick={performLogout}
+              className="btn-ghost !py-1.5 !px-3"
+            >
+              Sign out now
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

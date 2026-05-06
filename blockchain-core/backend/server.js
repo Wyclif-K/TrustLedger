@@ -26,6 +26,15 @@ async function start() {
       logger.info('Connecting to Hyperledger Fabric...');
       await fabricService.connect();
       logger.info('Fabric network connected.');
+      const ep = config.fabric.peerEndpoint || '';
+      const host = ep.includes(':') ? ep.slice(0, ep.lastIndexOf(':')) : ep;
+      const isLocal = /^(localhost|127\.0\.0\.1)$/i.test(host);
+      if (!isLocal) {
+        logger.info(
+          `Remote Fabric peer: ${ep} (TLS expects FABRIC_PEER_HOST_ALIAS=${config.fabric.peerHostAlias}). ` +
+            'Open VPS/AWS security group inbound TCP for that port from your API host (e.g. Railway); gRPC uses TLS.'
+        );
+      }
     } else {
       logger.warn(
         'Hyperledger Fabric is disabled (FABRIC_ENABLED=false). PostgreSQL-backed auth works; blockchain routes return 503 until Fabric is enabled.'

@@ -10,7 +10,29 @@ const authService    = require('../services/auth.service');
 const fabricService  = require('../services/fabric.service');
 const prisma         = require('../services/db.service');
 const { sendSuccess, sendCreated, sendError } = require('../utils/response');
+const config         = require('../config');
 const logger         = require('../config/logger');
+
+const REFRESH_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+function refreshCookieSetOpts() {
+  return {
+    httpOnly: true,
+    secure:   config.auth.refreshCookie.secure,
+    sameSite: config.auth.refreshCookie.sameSite,
+    maxAge:   REFRESH_MAX_AGE_MS,
+    path:     '/',
+  };
+}
+
+function refreshCookieClearOpts() {
+  return {
+    httpOnly: true,
+    secure:   config.auth.refreshCookie.secure,
+    sameSite: config.auth.refreshCookie.sameSite,
+    path:     '/',
+  };
+}
 
 // ─── Validators ───────────────────────────────────────────────────────────────
 const loginValidators = [
@@ -104,12 +126,7 @@ async function login(req, res, next) {
 
     const result = await authService.login(email, password, ipAddress, deviceInfo);
 
-    res.cookie('refreshToken', result.refreshToken, {
-      httpOnly: true,
-      secure:   process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge:   7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    res.cookie('refreshToken', result.refreshToken, refreshCookieSetOpts());
 
     return sendSuccess(res, {
       accessToken:  result.accessToken,
@@ -133,7 +150,7 @@ async function logout(req, res, next) {
   try {
     const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
     if (refreshToken) await authService.revokeSession(refreshToken);
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', refreshCookieClearOpts());
     return sendSuccess(res, {}, 'Logged out successfully.');
   } catch (err) {
     next(err);
@@ -193,7 +210,7 @@ async function changePassword(req, res, next) {
 
     // Revoke all sessions — user must log in again
     await authService.revokeAllUserSessions(user.id);
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', refreshCookieClearOpts());
 
     return sendSuccess(res, {}, 'Password changed. Please log in again.');
   } catch (err) {

@@ -85,8 +85,19 @@ async function list(req, res, next) {
 async function markRead(req, res, next) {
   try {
     const { id } = req.params;
+    const scope = String(req.query.scope || 'mine').toLowerCase();
+
+    if (scope === 'all' && !canViewGlobalNotifications(req.user)) {
+      return sendError(
+        res,
+        403,
+        'Access denied. Global notification scope requires ADMIN/AUDITOR/SUPER_ADMIN.'
+      );
+    }
+
+    const scopeWhere = buildScopeWhere(scope, req.user);
     const result = await prisma.notification.updateMany({
-      where: { id, memberId: req.user.memberId },
+      where: { ...scopeWhere, id },
       data:  { isRead: true },
     });
     if (result.count === 0) return sendError(res, 404, 'Notification not found.');
@@ -101,8 +112,18 @@ async function markRead(req, res, next) {
  */
 async function markAllRead(req, res, next) {
   try {
+    const scope = String(req.query.scope || 'mine').toLowerCase();
+    if (scope === 'all' && !canViewGlobalNotifications(req.user)) {
+      return sendError(
+        res,
+        403,
+        'Access denied. Global notification scope requires ADMIN/AUDITOR/SUPER_ADMIN.'
+      );
+    }
+
+    const scopeWhere = buildScopeWhere(scope, req.user);
     const result = await prisma.notification.updateMany({
-      where: { memberId: req.user.memberId, isRead: false },
+      where: { ...scopeWhere, isRead: false },
       data:  { isRead: true },
     });
     return sendSuccess(res, { updated: result.count });

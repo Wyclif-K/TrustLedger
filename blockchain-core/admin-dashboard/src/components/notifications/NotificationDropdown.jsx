@@ -4,6 +4,7 @@
 
 import React, { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import {
   Bell,
   BellRing,
@@ -44,6 +45,7 @@ function TypeIcon({ type }) {
 
 export default function NotificationDropdown() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
   const canViewSaccoScope = ['ADMIN', 'AUDITOR', 'SUPER_ADMIN'].includes(user?.role)
   const [open, setOpen] = useState(false)
@@ -69,16 +71,79 @@ export default function NotificationDropdown() {
   })
 
   const markRead = useMutation({
-    mutationFn: (id) => notificationsApi.markRead(id),
-    onSuccess:  () => {
+    mutationFn: ({ id, currentScope }) => notificationsApi.markRead(id, { scope: currentScope }),
+    // Optimistic update for a single notification
+    onMutate: async ({ id, currentScope }) => {
+      await qc.cancelQueries({ queryKey: ['notifications-list'] })
+      await qc.cancelQueries({ queryKey: ['notifications-unread'] })
+
+      const previousList = qc.getQueryData(['notifications-list', currentScope, filter])
+      const previousUnread = qc.getQueryData(['notifications-unread', currentScope])
+
+      if (previousList) {
+        qc.setQueryData(['notifications-list', currentScope, filter], (old = []) =>
+          old.map((n) => (n.id === id ? { ...n, isRead: true } : n)),
+        )
+      }
+      if (previousUnread && typeof previousUnread.count === 'number') {
+        qc.setQueryData(['notifications-unread', currentScope], {
+          ...previousUnread,
+          count: Math.max(0, previousUnread.count - 1),
+        })
+      }
+
+      return { previousList, previousUnread, currentScope }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previousList) {
+        qc.setQueryData(['notifications-list', ctx.currentScope, filter], ctx.previousList)
+      }
+      if (ctx?.previousUnread) {
+        qc.setQueryData(['notifications-unread', ctx.currentScope], ctx.previousUnread)
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['notifications-unread'] })
       qc.invalidateQueries({ queryKey: ['notifications-list'] })
     },
   })
 
   const markAllRead = useMutation({
-    mutationFn: () => notificationsApi.markAllRead(),
-    onSuccess:  () => {
+    mutationFn: (currentScope) => notificationsApi.markAllRead({ scope: currentScope }),
+    // Optimistic update for everything in current scope
+    onMutate: async (currentScope) => {
+      await qc.cancelQueries({ queryKey: ['notifications-list'] })
+      await qc.cancelQueries({ queryKey: ['notifications-unread'] })
+
+      const previousList = qc.getQueryData(['notifications-list', currentScope, filter])
+      const previousUnread = qc.getQueryData(['notifications-unread', currentScope])
+
+      if (previousList) {
+        qc.setQueryData(['notifications-list', currentScope, filter], (old = []) =>
+          old.map((n) => ({ ...n, isRead: true })),
+        )
+      }
+
+      if (previousUnread && typeof previousUnread.count === 'number') {
+        qc.setQueryData(['notifications-unread', currentScope], {
+          ...previousUnread,
+          count: 0,
+        })
+      }
+
+      return { previousList, previousUnread, currentScope }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (!ctx) return
+      const { previousList, previousUnread, currentScope } = ctx
+      if (previousList) {
+        qc.setQueryData(['notifications-list', currentScope, filter], previousList)
+      }
+      if (previousUnread) {
+        qc.setQueryData(['notifications-unread', currentScope], previousUnread)
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['notifications-unread'] })
       qc.invalidateQueries({ queryKey: ['notifications-list'] })
     },
@@ -144,7 +209,7 @@ export default function NotificationDropdown() {
             <button
               type="button"
               disabled={unread === 0 || markAllRead.isPending}
-              onClick={() => markAllRead.mutate()}
+            onClick={() => markAllRead.mutate(scope)}
               className="text-xs font-medium text-brand-600 hover:text-brand-700 disabled:opacity-40 disabled:pointer-events-none px-2 py-1 rounded-lg hover:bg-brand-50"
             >
               Mark all read
@@ -229,7 +294,11 @@ export default function NotificationDropdown() {
                         !n.isRead && 'bg-brand-50/50'
                       )}
                       onClick={() => {
-                        if (!n.isRead) markRead.mutate(n.id)
+                        if (!n.isRead) markRead.mutate({ id: n.id, currentScope: scope })
+                        if (n.memberId) {
+                          navigate(`/members/${n.memberId}`)
+                          setOpen(false)
+                        }
                       }}
                     >
                       <TypeIcon type={n.type} />

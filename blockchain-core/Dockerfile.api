@@ -1,0 +1,14 @@
+# API only (no admin UI). Pair with Dockerfile.admin for split Railway services.
+# Railway: Root Directory = blockchain-core, Docker build uses this file (Settings → Dockerfile path = Dockerfile.api).
+# Variables: same as monolith; set CORS_ORIGIN to the admin static URL; for split origins set REFRESH_COOKIE_SAMESITE=none.
+FROM node:20-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production
+ENV SERVE_ADMIN_STATIC=false
+ENV DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/railway_build"
+COPY backend/package.json backend/package-lock.json ./
+RUN npm ci && npm cache clean --force
+COPY backend/ ./
+RUN npx prisma generate
+EXPOSE 3000
+CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]

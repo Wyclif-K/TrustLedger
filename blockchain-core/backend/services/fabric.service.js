@@ -19,9 +19,33 @@ let grpcClient = null;
 let network = null;
 let contract = null;
 
+function readTlsCaBuffer() {
+  if (config.fabric.materialMode === 'pem') {
+    return Buffer.from(config.fabric.tlsCertPem, 'utf8');
+  }
+  return fs.readFileSync(path.resolve(config.fabric.tlsCertPath));
+}
+
+function readCertPemString() {
+  if (config.fabric.materialMode === 'pem') {
+    return config.fabric.certPem;
+  }
+  return fs.readFileSync(path.resolve(config.fabric.certPath), 'utf8');
+}
+
+function readPrivateKeyPem() {
+  if (config.fabric.materialMode === 'pem') {
+    return config.fabric.keyPem;
+  }
+  const keyDir = path.resolve(config.fabric.keyDir);
+  const keyFiles = fs.readdirSync(keyDir).filter((f) => !f.startsWith('.'));
+  if (keyFiles.length === 0) throw new Error('No private key found in keystore directory.');
+  return fs.readFileSync(path.join(keyDir, keyFiles[0]), 'utf8');
+}
+
 // ─── Build gRPC Client ────────────────────────────────────────────────────────
 function buildGrpcClient() {
-  const tlsCert = fs.readFileSync(path.resolve(config.fabric.tlsCertPath));
+  const tlsCert = readTlsCaBuffer();
   const credentials = grpc.credentials.createSsl(tlsCert);
   return new grpc.Client(config.fabric.peerEndpoint, credentials, {
     'grpc.ssl_target_name_override': config.fabric.peerHostAlias,
@@ -30,7 +54,7 @@ function buildGrpcClient() {
 
 // ─── Build Fabric Identity & Signer ──────────────────────────────────────────
 function buildIdentity() {
-  const certPem = fs.readFileSync(path.resolve(config.fabric.certPath));
+  const certPem = readCertPemString();
   return {
     mspId:       config.fabric.mspId,
     credentials: Buffer.from(certPem),
@@ -38,18 +62,16 @@ function buildIdentity() {
 }
 
 function buildSigner() {
-  const keyDir = path.resolve(config.fabric.keyDir);
-  const certPem = fs.readFileSync(path.resolve(config.fabric.certPath), 'utf8');
-  const keyFiles = fs.readdirSync(keyDir).filter((f) => !f.startsWith('.'));
-  if (keyFiles.length === 0) throw new Error('No private key found in keystore directory.');
-  const keyPem = fs.readFileSync(path.join(keyDir, keyFiles[0]));
+  const certPem = readCertPemString();
+  const keyPem = readPrivateKeyPem();
   const privateKey = crypto.createPrivateKey(keyPem);
   try {
     new crypto.X509Certificate(certPem).checkPrivateKey(privateKey);
   } catch {
     throw new Error(
-      'FABRIC_CERT_PATH certificate does not match the private key in FABRIC_KEY_DIR. ' +
-        'Fix paths or keystore so the Admin signcert and key pair belong together.'
+      'FABRIC certificate does not match the private key. ' +
+        'If using PEM env vars, check FABRIC_CERT_PEM and FABRIC_KEY_PEM; ' +
+        'if using files, ensure FABRIC_CERT_PATH and FABRIC_KEY_DIR keystore belong together.'
     );
   }
   // Gateway passes SHA256(proposalBytes) as digest; sign that with ECDSA (low-S DER), do not hash again.

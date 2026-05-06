@@ -50,6 +50,7 @@ function userToMemberProfile(user) {
     registeredBy: null,
     registeredAt: user.createdAt ? user.createdAt.toISOString() : null,
     updatedAt: user.updatedAt ? user.updatedAt.toISOString() : null,
+    lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
     ledgerSynced: false,
   };
 }
@@ -83,20 +84,68 @@ async function getMember(req, res, next) {
   try {
     const { memberId } = req.params;
 
+    const user = await prisma.user.findUnique({ where: { memberId } });
+
+    // If no off-chain user exists at all, prefer a clear 404 regardless of ledger state.
+    if (!user && !config.fabric.enabled) {
+      return sendError(res, 404, 'Member not found.');
+    }
+
+    let ledgerMember = null;
+
     if (config.fabric.enabled) {
       try {
         const member = await fabricService.SavingsContract.evaluate('getMember', memberId);
         if (member && typeof member === 'object' && member.memberId) {
-          return sendSuccess(res, member);
+          ledgerMember = member;
         }
       } catch (err) {
         if (!isLedgerMissingOrFabricDown(err)) return next(err);
       }
     }
 
-    const user = await prisma.user.findUnique({ where: { memberId } });
-    if (!user) return sendError(res, 404, 'Member not found.');
-    return sendSuccess(res, userToMemberProfile(user));
+    if (!user && !ledgerMember) {
+      return sendError(res, 404, 'Member not found.');
+    }
+
+    // Base profile from DB user (email, lastLoginAt, etc.) when available
+    const baseProfile = user ? userToMemberProfile(user) : {};
+
+    // Merge with ledger member when available; ledger status/role/registeredBy take precedence,
+    // while email/lastLoginAt remain from the user profile.
+    let merged = {
+      ...baseProfile,
+      ...ledgerMember,
+      email: baseProfile.email || ledgerMember?.email,
+      lastLoginAt: baseProfile.lastLoginAt || ledgerMember?.lastLoginAt || null,
+    };
+
+    // Derive a human-friendly "registeredByDisplay" from the Fabric X.509 subject when possible.
+    if (ledgerMember && ledgerMember.registeredBy) {
+      const raw = String(ledgerMember.registeredBy);
+      let display = raw;
+
+      // Extract CN from DN string: .../CN=Admin@sacco.trustledger.com/...
+      const cnMatch = raw.match(/CN=([^/]+)/);
+      const cn = cnMatch ? cnMatch[1] : null;
+
+      if (cn) {
+        // Try to resolve CN as an email in the users table to get fullName.
+        const registeringUser = await prisma.user.findUnique({ where: { email: cn } }).catch(() => null);
+        if (registeringUser) {
+          display = registeringUser.fullName || registeringUser.email || cn;
+        } else {
+          display = cn;
+        }
+      }
+
+      merged = {
+        ...merged,
+        registeredByDisplay: display,
+      };
+    }
+
+    return sendSuccess(res, merged);
   } catch (err) {
     next(err);
   }

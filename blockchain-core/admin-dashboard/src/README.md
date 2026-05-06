@@ -81,6 +81,20 @@ Point your web server to proxy `/api/*` to the Node.js backend.
 - Auto-redirects to dashboard if already authenticated
 - JWT stored in Zustand (persisted to localStorage)
 - Automatic token refresh on 401 via Axios interceptor
+- Idle timeout warning/logout (configurable via Vite env vars below)
+
+#### Optional Vite env vars (idle timeout)
+
+Set these in `admin-dashboard/.env` (or `.env.local`) and restart Vite:
+
+```bash
+VITE_IDLE_WARNING_MINUTES=10
+VITE_IDLE_LOGOUT_MINUTES=15
+```
+
+- `VITE_IDLE_WARNING_MINUTES`: when warning popup appears
+- `VITE_IDLE_LOGOUT_MINUTES`: automatic logout time
+- If logout is set less than warning, the app enforces at least warning + 1 minute
 
 ### Dashboard (`/dashboard`)
 - Live SACCO stats: total members, savings balance, active loans, pending approvals

@@ -1,7 +1,12 @@
 import axios from 'axios'
 import { useAuthStore } from '@/store/auth.store'
 
-const api = axios.create({ baseURL: '/api/v1', headers: { 'Content-Type': 'application/json' }, withCredentials: true })
+/** Same-origin default (Docker/Railway bundle). Optional split deploy: set VITE_API_BASE_URL=https://your-api.up.railway.app */
+const apiOrigin = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+const baseURL = apiOrigin ? `${apiOrigin}/api/v1` : '/api/v1'
+const refreshUrl = apiOrigin ? `${apiOrigin}/api/v1/auth/refresh` : '/api/v1/auth/refresh'
+
+const api = axios.create({ baseURL, headers: { 'Content-Type': 'application/json' }, withCredentials: true })
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken
@@ -19,7 +24,7 @@ api.interceptors.response.use(res => res, async (error) => {
       .then(token => { original.headers.Authorization = `Bearer ${token}`; return api(original) })
     original._retry = true; refreshing = true
     try {
-      const { data } = await axios.post('/api/v1/auth/refresh', {}, { withCredentials: true })
+      const { data } = await axios.post(refreshUrl, {}, { withCredentials: true })
       const newToken = data.data.accessToken
       useAuthStore.getState().setAccessToken(newToken); processQueue(null, newToken)
       original.headers.Authorization = `Bearer ${newToken}`; return api(original)
@@ -57,8 +62,8 @@ export async function fetchUssdBridgeHealth() {
 export const notificationsApi = {
   unreadCount: (params) => api.get('/notifications/unread-count', { params }),
   list: (params) => api.get('/notifications', { params }),
-  markRead: (id) => api.patch(`/notifications/${id}/read`),
-  markAllRead: () => api.patch('/notifications/read-all'),
+  markRead: (id, params) => api.patch(`/notifications/${id}/read`, null, { params }),
+  markAllRead: (params) => api.patch('/notifications/read-all', null, { params }),
 }
 
 export const authApi = {

@@ -1,0 +1,8 @@
+**/node_modules
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+backend/logs
+admin-dashboard/dist
+blockchain/network/channel-artifacts

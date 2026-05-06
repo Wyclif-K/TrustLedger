@@ -255,7 +255,7 @@ export default function MemberDetailPage() {
               ['Last sign-in', formatDateTime(member.lastLoginAt)],
               ['Registered', formatDate(member.registeredAt)],
               ['Last Updated', formatDate(member.updatedAt)],
-              ['Registered By', displayOrDash(member.registeredBy)],
+              ['Registered By', displayOrDash(member.registeredByDisplay || member.registeredBy)],
             ].map(([label, value]) => (
               <div key={label}>
                 <p className="text-xs text-surface-400 mb-0.5">{label}</p>

@@ -54,12 +54,35 @@ const fabric = {
   tlsCertPath:    '',
   certPath:       '',
   keyDir:         '',
+  /** PEM strings from env (e.g. Railway) — alternative to files on disk */
+  tlsCertPem:     '',
+  certPem:        '',
+  keyPem:         '',
+  materialMode:   'none',
 };
 
 if (fabricEnabled) {
-  fabric.tlsCertPath = stripEnvQuotes(required('FABRIC_TLS_CERT_PATH'));
-  fabric.certPath = stripEnvQuotes(required('FABRIC_CERT_PATH'));
-  fabric.keyDir = stripEnvQuotes(required('FABRIC_KEY_DIR'));
+  const tlsPem = String(optional('FABRIC_TLS_CERT_PEM', '')).trim();
+  const certPem = String(optional('FABRIC_CERT_PEM', '')).trim();
+  const keyPem = String(optional('FABRIC_KEY_PEM', '')).trim();
+  const pemCount = [tlsPem, certPem, keyPem].filter(Boolean).length;
+
+  if (pemCount === 3) {
+    fabric.tlsCertPem = tlsPem.replace(/\\n/g, '\n');
+    fabric.certPem = certPem.replace(/\\n/g, '\n');
+    fabric.keyPem = keyPem.replace(/\\n/g, '\n');
+    fabric.materialMode = 'pem';
+  } else if (pemCount === 0) {
+    fabric.tlsCertPath = stripEnvQuotes(required('FABRIC_TLS_CERT_PATH'));
+    fabric.certPath = stripEnvQuotes(required('FABRIC_CERT_PATH'));
+    fabric.keyDir = stripEnvQuotes(required('FABRIC_KEY_DIR'));
+    fabric.materialMode = 'path';
+  } else {
+    throw new Error(
+      'Fabric credentials incomplete: set all of FABRIC_TLS_CERT_PEM, FABRIC_CERT_PEM, and FABRIC_KEY_PEM ' +
+        '(recommended on Railway) or use FABRIC_TLS_CERT_PATH, FABRIC_CERT_PATH, and FABRIC_KEY_DIR for local files.'
+    );
+  }
 }
 
 const atUsername = stripEnvQuotes(optional('AT_USERNAME', '')).trim();
@@ -99,6 +122,22 @@ const africasTalking = {
   smsSavingsAlerts: atSmsSavingsAlertsRaw !== 'false' && atSmsSavingsAlertsRaw !== '0',
 };
 
+function boolEnv(key, defaultVal) {
+  const v = String(optional(key, defaultVal)).toLowerCase();
+  return v === 'true' || v === '1' || v === 'yes';
+}
+
+/** Split admin + API on different hosts (e.g. two Railway URLs): use `none` with HTTPS. Browsers require Secure when sameSite is none. */
+function parseRefreshCookieSameSite() {
+  const raw = String(optional('REFRESH_COOKIE_SAMESITE', 'strict')).toLowerCase();
+  if (raw === 'strict' || raw === 'lax' || raw === 'none') return raw;
+  return 'strict';
+}
+
+const refreshCookieSameSite = parseRefreshCookieSameSite();
+const refreshCookieSecure =
+  optional('NODE_ENV', 'development') === 'production' || refreshCookieSameSite === 'none';
+
 const config = {
   env:     optional('NODE_ENV', 'development'),
   port:    parseInt(optional('PORT', '3000'), 10),
@@ -106,10 +145,21 @@ const config = {
   isDev:   optional('NODE_ENV', 'development') === 'development',
   isProd:  optional('NODE_ENV', 'development') === 'production',
 
+  /** When true (and dist exists), Express serves ../admin-dashboard/dist — same origin as the API. */
+  serveAdmin: boolEnv('SERVE_ADMIN_STATIC', 'false'),
+
   jwt: {
     secret:             required('JWT_SECRET'),
     expiresIn:        optional('JWT_EXPIRES_IN', '8h'),
     refreshExpiresIn:   optional('JWT_REFRESH_EXPIRES_IN', '7d'),
+  },
+
+  /** httpOnly refresh cookie (login). For admin UI on a different origin than the API, set REFRESH_COOKIE_SAMESITE=none and CORS_ORIGIN to the admin URL. */
+  auth: {
+    refreshCookie: {
+      sameSite: refreshCookieSameSite,
+      secure:   refreshCookieSecure,
+    },
   },
 
   fabric,
