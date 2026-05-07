@@ -186,7 +186,7 @@ const config = {
   rateLimit: {
     windowMs: parseInt(optional('RATE_LIMIT_WINDOW_MS', '900000'), 10),
     max: parseInt(
-      optional('RATE_LIMIT_MAX', optional('NODE_ENV', 'development') === 'production' ? '2000' : '300'),
+      optional('RATE_LIMIT_MAX', optional('NODE_ENV', 'development') === 'production' ? '10000' : '500'),
       10,
     ),
   },
