@@ -162,7 +162,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun saveApiBaseUrl(raw: String): String? {
         val normalized = normalizeTrustLedgerApiBaseUrl(raw)
-            ?: return "Enter a valid URL, e.g. http://192.168.43.56:3000/api/v1/"
+            ?: return "Enter a valid host or URL (e.g. https://your-app.up.railway.app or http://192.168.43.56:3000 — /api/v1 is added automatically)."
         val before = TrustLedgerBackend.resolveBaseUrl(getApplication()).trimEnd('/')
         val after = normalized.trimEnd('/')
         val urlChanged = before != after

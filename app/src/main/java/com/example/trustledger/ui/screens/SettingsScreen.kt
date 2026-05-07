@@ -142,7 +142,7 @@ fun SettingsScreen(
                     colors = fieldColors,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     supportingText = {
-                        Text("Example: http://192.168.43.56:3000/api/v1")
+                        Text("Railway: paste https://….up.railway.app (path /api/v1 added if missing). LAN: http://IP:3000/api/v1")
                     },
                 )
                 Row(

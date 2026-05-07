@@ -118,7 +118,7 @@ object TrustLedgerBackend {
     /** GET `{base}/health` without auth. [baseUrlInput] is a full API base like `http://host:3000/api/v1/`. */
     fun probeHealthAtBaseUrl(baseUrlInput: String): String {
         val base = normalizeTrustLedgerApiBaseUrl(baseUrlInput.trim())
-            ?: return "Invalid base URL. Use http://IP:PORT/api/v1/ (see the hint below the field)."
+            ?: return "Invalid base URL. Use your Railway HTTPS host or http://IP:PORT (see the hint below the field)."
         val gson = Gson()
         val client = OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
