@@ -12,6 +12,8 @@ FROM node:20-bookworm-slim
 WORKDIR /app
 ENV NODE_ENV=production
 ENV SERVE_ADMIN_STATIC=true
+# Log to stdout only in containers unless user sets ENABLE_ROTATE_FILE_LOG=true
+ENV ENABLE_ROTATE_FILE_LOG=false
 # Prisma generate does not need a live DB, only a syntactically valid URL.
 ENV DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/railway_build"
 COPY backend/package.json backend/package-lock.json ./

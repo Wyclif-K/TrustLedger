@@ -10,9 +10,19 @@ const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
 const config = require('./index');
 
-const logDir = path.resolve(config.logging.dir);
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir, { recursive: true });
+/** Container hosts (Railway, etc.) should log stdout only unless ENABLE_ROTATE_FILE_LOG=true — avoids mkdir / disk issues. */
+const envRotate = process.env.ENABLE_ROTATE_FILE_LOG;
+const enableRotate =
+  envRotate != null && String(envRotate).trim() !== ''
+    ? String(envRotate).toLowerCase() === 'true'
+    : !config.isProd;
+
+let logDir = '';
+if (enableRotate) {
+  logDir = path.resolve(config.logging.dir);
+  if (!fs.existsSync(logDir)) {
+    fs.mkdirSync(logDir, { recursive: true });
+  }
 }
 
 const format = winston.format.combine(
@@ -24,20 +34,26 @@ const format = winston.format.combine(
   })
 );
 
-const logger = winston.createLogger({
-  level: config.logging.level,
-  format,
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(winston.format.colorize(), format),
-    }),
+const transports = [
+  new winston.transports.Console({
+    format: winston.format.combine(winston.format.colorize(), format),
+  }),
+];
+if (enableRotate && logDir) {
+  transports.push(
     new DailyRotateFile({
-      dirname: logDir,
+      dirname:  logDir,
       filename: 'trustledger-%DATE%.log',
       datePattern: 'YYYY-MM-DD',
-      maxFiles: '14d',
-    }),
-  ],
+      maxFiles:    '14d',
+    })
+  );
+}
+
+const logger = winston.createLogger({
+  level:      config.logging.level,
+  format,
+  transports,
 });
 
 module.exports = logger;

@@ -5,6 +5,14 @@
 
 'use strict';
 
+/** Always visible in Railway / Docker stdout even if Winston transport setup misbehaves */
+console.log('[TrustLedger] bootstrap', JSON.stringify({
+  node: process.version,
+  cwd: process.cwd(),
+  PORT: process.env.PORT,
+  NODE_ENV: process.env.NODE_ENV,
+}));
+
 const app           = require('./app');
 const config        = require('./config');
 const logger        = require('./config/logger');
