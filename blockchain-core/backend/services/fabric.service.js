@@ -47,9 +47,16 @@ function readPrivateKeyPem() {
 function buildGrpcClient() {
   const tlsCert = readTlsCaBuffer();
   const credentials = grpc.credentials.createSsl(tlsCert);
-  return new grpc.Client(config.fabric.peerEndpoint, credentials, {
+  const client = new grpc.Client(config.fabric.peerEndpoint, credentials, {
     'grpc.ssl_target_name_override': config.fabric.peerHostAlias,
   });
+  /** Keeps stray channel TLS/tcp failures from bubbling as unhandledRejection → process.exit (Railway 502 loops). */
+  if (typeof client.on === 'function') {
+    client.on('error', (e) =>
+      logger.warn(`Fabric grpc client transient error (${config.fabric.peerEndpoint}): ${e?.message || e}`)
+    );
+  }
+  return client;
 }
 
 // ─── Build Fabric Identity & Signer ──────────────────────────────────────────
@@ -97,10 +104,12 @@ async function connect_() {
 
   logger.info('Connecting to Hyperledger Fabric network...');
 
-  grpcClient = buildGrpcClient();
+  let newClient = null;
+  try {
+    newClient = buildGrpcClient();
 
-  gateway = connect({
-    client:    grpcClient,
+    gateway = connect({
+      client:    newClient,
     identity:  buildIdentity(),
     signer:    buildSigner(),
     hash:      hash.sha256,
@@ -108,25 +117,56 @@ async function connect_() {
     endorseOptions:   () => ({ deadline: Date.now() + 15_000 }),
     submitOptions:    () => ({ deadline: Date.now() + 5_000  }),
     commitStatusOptions: () => ({ deadline: Date.now() + 60_000 }),
-  });
+    });
+    grpcClient = newClient;
 
-  network  = gateway.getNetwork(config.fabric.channelName);
-  contract = network.getContract(config.fabric.chaincodeName);
+    network  = gateway.getNetwork(config.fabric.channelName);
+    contract = network.getContract(config.fabric.chaincodeName);
 
-  logger.info(`Connected to channel: ${config.fabric.channelName}`);
+    logger.info(`Connected to channel: ${config.fabric.channelName}`);
+  } catch (e) {
+    if (gateway) {
+      try {
+        gateway.close();
+      } catch (_) { /* noop */ }
+    }
+    gateway = null;
+    network = null;
+    contract = null;
+    const c = grpcClient || newClient;
+    if (c) {
+      try {
+        c.close();
+      } catch (_) { /* noop */ }
+    }
+    grpcClient = null;
+    throw e;
+  }
 }
 
 // ─── Disconnect ───────────────────────────────────────────────────────────────
 function disconnect() {
   if (!config.fabric.enabled) return;
 
+  /** Close gateway before raw client — and always close grpc if it exists even when gateway creation failed midway */
   if (gateway) {
-    gateway.close();
-    grpcClient.close();
-    gateway    = null;
+    try {
+      gateway.close();
+    } catch (e) {
+      logger.warn('Fabric gateway.close:', e.message);
+    }
+  }
+  gateway = null;
+  network = null;
+  contract = null;
+
+  if (grpcClient) {
+    try {
+      grpcClient.close();
+    } catch (e) {
+      logger.warn('Fabric grpc client.close:', e.message);
+    }
     grpcClient = null;
-    network    = null;
-    contract   = null;
     logger.info('Disconnected from Fabric network.');
   }
 }
