@@ -72,8 +72,21 @@ async function validateATInBackground() {
 async function start() {
   try {
     // ── 1. Connect to PostgreSQL ─────────────────────────────────────────────
-    logger.info('Connecting to PostgreSQL...');
-    await prisma.$connect();
+    const pgTimeoutMs = parseInt(process.env.POSTGRES_CONNECT_TIMEOUT_MS || '30000', 10);
+    logger.info(`Connecting to PostgreSQL (timeout ${pgTimeoutMs}ms)...`);
+    await Promise.race([
+      prisma.$connect(),
+      new Promise((_, rej) => {
+        setTimeout(() => {
+          rej(
+            new Error(
+              `PostgreSQL did not connect within ${pgTimeoutMs}ms. Check DATABASE_URL ` +
+                '(Railway Postgres reference); append ?sslmode=require if SSL is required.',
+            ),
+          );
+        }, pgTimeoutMs);
+      }),
+    ]);
     logger.info('PostgreSQL connected.');
 
     // ── 2. Start HTTP Server first (critical for Railway / reverse proxies)
@@ -117,7 +130,18 @@ async function shutdown(exitCode = 0) {
 
 process.on('SIGTERM', () => shutdown(0));
 process.on('SIGINT',  () => shutdown(0));
-process.on('uncaughtException',  (err) => { logger.error('Uncaught Exception:', err);  shutdown(1); });
-process.on('unhandledRejection', (err) => { logger.error('Unhandled Rejection:', err); shutdown(1); });
+process.on('uncaughtException', (err) => {
+  logger.error('Uncaught Exception:', err);
+  shutdown(1);
+});
+/**
+ * gRPC/async deps sometimes reject after startup; exiting here takes down Railway TCP → 502 for every request.
+ * Production: log and keep listening. Set EXIT_ON_UNHANDLED_REJECTION=true or use development to crash instead.
+ */
+process.on('unhandledRejection', (err) => {
+  logger.error('Unhandled Rejection:', err);
+  const exitStrict = String(process.env.EXIT_ON_UNHANDLED_REJECTION || '').toLowerCase() === 'true';
+  if (exitStrict || config.isDev) shutdown(1);
+});
 
 start();

@@ -22,4 +22,5 @@ COPY backend/ ./
 RUN npx prisma generate
 COPY --from=admin-build /build/admin-dashboard/dist ../admin-dashboard/dist
 EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+# `set -e` stops if migrate fails; echoes show clearly in Railway logs whether Node starts
+CMD ["sh", "-c", "set -e; echo trustledger-prisma-migrate-start; npx prisma migrate deploy; echo trustledger-node-start; exec node server.js"]
