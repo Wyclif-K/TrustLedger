@@ -182,9 +182,13 @@ const config = {
       String(optional('ALLOW_LEDGER_MEMBER_PURGE', 'false')).toLowerCase() === 'true',
   },
 
+  /** Only applied to /api/v1 (see app.js) — static admin files must not share this budget. */
   rateLimit: {
     windowMs: parseInt(optional('RATE_LIMIT_WINDOW_MS', '900000'), 10),
-    max:      parseInt(optional('RATE_LIMIT_MAX', '100'), 10),
+    max: parseInt(
+      optional('RATE_LIMIT_MAX', optional('NODE_ENV', 'development') === 'production' ? '2000' : '300'),
+      10,
+    ),
   },
 
   cors: {

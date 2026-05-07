@@ -60,15 +60,18 @@ app.use((req, res, next) => cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 })(req, res, next));
 
-// ─── Rate Limiting ────────────────────────────────────────────────────────────
-const limiter = rateLimit({
+// ─── Rate limiting (API only) ────────────────────────────────────────────────
+// Global limiter consumed the admin SPA static budget (dozens of JS/CSS) + API → instant 429.
+const apiLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max:      config.rateLimit.max,
   standardHeaders: true,
   legacyHeaders:   false,
   message: { success: false, message: 'Too many requests. Please slow down.' },
+  /** Mounted under apiPrefix; req.path is relative to mount (e.g. /health). */
+  skip: (req) => req.path === '/health' || req.path === '/ussd',
 });
-app.use(limiter);
+app.use(config.apiPrefix, apiLimiter);
 
 // ─── Body Parsing ─────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '10mb' }));
