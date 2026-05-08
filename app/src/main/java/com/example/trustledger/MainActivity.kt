@@ -1,7 +1,6 @@
 package com.example.trustledger
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedContent
@@ -27,14 +26,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProvider
+import com.example.trustledger.security.SecureCredentialStore
 import com.example.trustledger.ui.navigation.AuthenticatedApp
 import com.example.trustledger.ui.screens.LoginScreen
 import com.example.trustledger.ui.screens.SettingsScreen
 import com.example.trustledger.ui.theme.TrustLedgerTheme
 import com.example.trustledger.viewmodel.MainViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private enum class UnauthScreen { LOGIN, SETTINGS }
 
@@ -66,6 +70,12 @@ class MainActivity : ComponentActivity() {
                 if (!msg.isNullOrBlank()) {
                     snackbarHostState.showSnackbar(msg)
                     vm.consumeSnackbar()
+                }
+            }
+
+            LaunchedEffect(unauthScreen) {
+                if (unauthScreen == UnauthScreen.LOGIN) {
+                    vm.refreshBiometricLoginAvailability()
                 }
             }
 
@@ -104,7 +114,9 @@ class MainActivity : ComponentActivity() {
                                 if (!isAuthed) {
                                     when (unauthScr) {
                                         UnauthScreen.LOGIN -> LoginScreen(
-                                            onLogin = { email, password -> vm.login(email, password) },
+                                            onLogin = { email, password, persistBio ->
+                                                vm.login(email, password, persistBio)
+                                            },
                                             isLoading = vm.isLoading,
                                             errorMessage = vm.errorMessage,
                                             apiBaseUrlDisplay = vm.apiBaseUrlForDisplay(),
@@ -113,6 +125,9 @@ class MainActivity : ComponentActivity() {
                                             onTestConnection = { vm.runConnectionTest("") },
                                             onClearConnectionTestResult = { vm.clearConnectionTestResult() },
                                             onOpenSettings = { unauthScreen = UnauthScreen.SETTINGS },
+                                            biometricLoginAvailable = vm.biometricLoginAvailable,
+                                            canOfferBiometricOptIn = vm.canOfferBiometricOptIn,
+                                            onBiometricLoginClick = { this@MainActivity.showBiometricLoginPrompt(vm) },
                                         )
                                         UnauthScreen.SETTINGS -> SettingsScreen(
                                             vm = vm,
@@ -131,5 +146,26 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun showBiometricLoginPrompt(vm: MainViewModel) {
+        val executor = ContextCompat.getMainExecutor(this)
+        val prompt = BiometricPrompt(
+            this,
+            executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    val creds = SecureCredentialStore.read(applicationContext) ?: return
+                    vm.login(creds.first, creds.second, persistForBiometric = false)
+                }
+            },
+        )
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(getString(R.string.biometric_prompt_title))
+            .setSubtitle(getString(R.string.biometric_prompt_subtitle))
+            .setNegativeButtonText(getString(R.string.biometric_prompt_negative))
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
+            .build()
+        prompt.authenticate(info)
     }
 }

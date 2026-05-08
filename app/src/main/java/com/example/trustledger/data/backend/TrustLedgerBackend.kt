@@ -15,6 +15,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import okhttp3.Authenticator
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -44,6 +45,22 @@ object TrustLedgerPrefs {
 
 object TrustLedgerBackend {
 
+    /**
+     * OkHttp may follow HTTP→HTTPS redirects using a method that drops POST bodies (login becomes GET → 404).
+     * Force HTTPS for Railway hosts before the request leaves the app.
+     */
+    private val forceHttpsRailwayInterceptor = Interceptor { chain ->
+        val req = chain.request()
+        val url = req.url
+        if (url.scheme.equals("http", ignoreCase = true) &&
+            url.host.endsWith(".up.railway.app", ignoreCase = true)
+        ) {
+            val httpsUrl = url.newBuilder().scheme("https").build()
+            return@Interceptor chain.proceed(req.newBuilder().url(httpsUrl).build())
+        }
+        chain.proceed(req)
+    }
+
     /** Default URL with no trailing slash (nothing saved in prefs yet). */
     fun defaultApiBaseUrl(context: Context): String {
         val app = context.applicationContext
@@ -60,7 +77,8 @@ object TrustLedgerBackend {
         val prefs = app.getSharedPreferences(TrustLedgerPrefs.NAME, Context.MODE_PRIVATE)
         val stored = prefs.getString(TrustLedgerPrefs.API_BASE_URL, null)?.trim()
         val raw = if (!stored.isNullOrBlank()) stored else defaultApiBaseUrl(app)
-        return raw.trimEnd('/') + "/"
+        val withSlash = raw.trim().trimEnd('/') + "/"
+        return normalizeTrustLedgerApiBaseUrl(withSlash) ?: withSlash
     }
 
     fun api(context: Context): TrustLedgerApi {
@@ -78,6 +96,7 @@ object TrustLedgerBackend {
         }
 
         val baseClient = OkHttpClient.Builder()
+            .addInterceptor(forceHttpsRailwayInterceptor)
             .addInterceptor(logging)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
@@ -121,6 +140,7 @@ object TrustLedgerBackend {
             ?: return "Invalid base URL. Use your Railway HTTPS host or http://IP:PORT (see the hint below the field)."
         val gson = Gson()
         val client = OkHttpClient.Builder()
+            .addInterceptor(forceHttpsRailwayInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)

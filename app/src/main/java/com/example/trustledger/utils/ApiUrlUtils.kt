@@ -9,6 +9,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
  * - **`/api/v1` is required** for Retrofit (`auth/login`, `health` are relative to this base). If missing,
  *   it is appended automatically so `https://xxx.up.railway.app` becomes `https://xxx.up.railway.app/api/v1/`.
  * - **`*.up.railway.app`**: `http://` is upgraded to `https://` (plain HTTP often returns redirects/HTML, Gson then fails).
+ * - **Typo `.../api/vl/...`** (letter **l** instead of digit **1**) is rewritten to **`v1`** so routes resolve correctly.
  */
 fun normalizeTrustLedgerApiBaseUrl(input: String): String? {
     val t = input.trim()
@@ -28,6 +29,19 @@ fun normalizeTrustLedgerApiBaseUrl(input: String): String? {
     val host = parsed.host
     if (host.endsWith(".up.railway.app", ignoreCase = true) && parsed.scheme == "http") {
         parsed = parsed.newBuilder().scheme("https").build()
+    }
+
+    run {
+        val pathSegs = parsed.pathSegments.filter { it.isNotEmpty() }.toMutableList()
+        if (pathSegs.size >= 2 &&
+            pathSegs[pathSegs.size - 2].equals("api", ignoreCase = true) &&
+            pathSegs[pathSegs.size - 1].equals("vl", ignoreCase = true)
+        ) {
+            pathSegs[pathSegs.size - 1] = "v1"
+            val nb = parsed.newBuilder().encodedPath("/")
+            pathSegs.forEach { nb.addPathSegment(it) }
+            parsed = nb.build()
+        }
     }
 
     val segs = parsed.pathSegments.filter { it.isNotEmpty() }

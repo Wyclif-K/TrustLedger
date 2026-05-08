@@ -24,6 +24,8 @@ import com.example.trustledger.LauncherIconHelper
 import com.example.trustledger.R
 import com.example.trustledger.data.UserDto
 import com.example.trustledger.notification.TrustLedgerNotificationHelper
+import com.example.trustledger.security.BiometricLoginSupport
+import com.example.trustledger.security.SecureCredentialStore
 import com.example.trustledger.utils.humanReadableApiError
 import com.example.trustledger.utils.normalizeTrustLedgerApiBaseUrl
 import kotlinx.coroutines.CancellationException
@@ -116,6 +118,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var connectionTestResult by mutableStateOf<String?>(null)
         private set
 
+    /** True when encrypted credentials exist and device biometrics are ready (login screen). */
+    var biometricLoginAvailable by mutableStateOf(false)
+        private set
+
+    /** Show opt-in checkbox before any saved credential exists. */
+    var canOfferBiometricOptIn by mutableStateOf(false)
+        private set
+
+    fun refreshBiometricLoginAvailability() {
+        val app = getApplication<Application>()
+        biometricLoginAvailable = BiometricLoginSupport.canOfferFingerprintButton(app)
+        canOfferBiometricOptIn = BiometricLoginSupport.deviceSupportsStrongBiometric(app) &&
+            !SecureCredentialStore.hasCredentials(app)
+    }
+
     fun clearConnectionTestResult() {
         connectionTestResult = null
     }
@@ -191,6 +208,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         unreadBaselineEstablished = false
         errorMessage = null
         syncLauncherIcon()
+        refreshBiometricLoginAvailability()
     }
 
     fun consumeSnackbar() {
@@ -198,7 +216,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     init {
-        // Keep this before restoreSession so UI theme is ready immediately.
+        refreshBiometricLoginAvailability()
+        // Keep restoreSession last so UI theme/restored session behaves as before.
         restoreSession()
     }
 
@@ -349,7 +368,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun login(email: String, password: String) {
+    fun login(email: String, password: String, persistForBiometric: Boolean = false) {
         viewModelScope.launch {
             isLoading = true
             errorMessage = null
@@ -374,6 +393,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         putString(TrustLedgerPrefs.REFRESH, data.refreshToken)
                     }
                 }.apply()
+
+                val app = getApplication<Application>()
+                if (persistForBiometric &&
+                    BiometricLoginSupport.deviceSupportsStrongBiometric(app)
+                ) {
+                    SecureCredentialStore.save(app, email.trim(), password)
+                }
+                refreshBiometricLoginAvailability()
             } catch (e: Exception) {
                 errorMessage = humanReadableApiError(e)
                 return@launch
@@ -427,6 +454,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     return@launch
                 }
                 snackbarMessage = env.message ?: "Password changed. Please sign in again."
+                SecureCredentialStore.clear(getApplication())
                 logoutInternal(clearSnackbar = false)
             } catch (e: Exception) {
                 errorMessage = humanReadableApiError(e)
@@ -453,6 +481,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         errorMessage = null
         if (clearSnackbar) snackbarMessage = null
         syncLauncherIcon()
+        refreshBiometricLoginAvailability()
     }
 
     private fun syncLauncherIcon() {

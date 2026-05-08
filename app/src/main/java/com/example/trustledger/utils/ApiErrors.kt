@@ -43,8 +43,21 @@ fun humanReadableApiError(e: Throwable): String {
                 try {
                     val o = Gson().fromJson(raw, JsonObject::class.java)
                     if (o != null) {
-                        o.get("message")?.asString?.trim()?.takeIf { it.isNotEmpty() }?.let {
-                            return it.collapseDuplicateMessage()
+                        o.get("message")?.asString?.trim()?.takeIf { it.isNotEmpty() }?.let { rawMsg ->
+                            var msg = rawMsg.collapseDuplicateMessage()
+                            if (msg.contains("Route not found", ignoreCase = true) &&
+                                msg.contains("GET", ignoreCase = true) &&
+                                msg.contains("auth/login", ignoreCase = true)
+                            ) {
+                                msg += " Login must use POST. If your base URL starts with http:// on " +
+                                    "*.up.railway.app, a redirect can downgrade POST to GET — use HTTPS, " +
+                                    "and ensure the path is /api/v1/ (digit 1)."
+                            } else if (msg.contains("/api/vl/", ignoreCase = true) ||
+                                Regex("/api/vl(?:/|\\?|$)", RegexOption.IGNORE_CASE).containsMatchIn(msg)
+                            ) {
+                                msg += " Check the API path: use /api/v1/ (the number \"1\"), not /api/vl/."
+                            }
+                            return msg
                         }
                         if (o.get("database")?.asString == "down") {
                             return "PostgreSQL is down on the server PC. Start Postgres, set DATABASE_URL in backend/.env, run npx prisma migrate deploy, then restart the API."

@@ -1,9 +1,26 @@
 <resources>
     <string name="app_name">TrustLedger</string>
     <!-- Fallback when BuildConfig.API_BASE_URL is empty. Prefer TRUSTLEDGER_API_BASE_URL in local.properties (see app/build.gradle.kts). -->
-    <string name="api_base_url">http://192.168.1.100:3000/api/v1/</string>
+    <string name="api_base_url">http://trustledger-production-38cb.up.railway.app/api/v1/</string>
     <string name="api_timeout_usb_tip">On a physical phone: open the same /api/v1/health URL in Chrome here — if it hangs, the phone cannot reach your PC (wrong IP, different Wi‑Fi, or firewall).\n\nUSB cable to this PC: on the PC run adb reverse tcp:3000 tcp:3000 — then set the base URL to http://127.0.0.1:3000/api/v1/ and tap Test connection.\n\nOn Windows, allow inbound TCP port 3000 (Node.js) in Windows Defender Firewall for Private networks.</string>
     <string name="login_network_hint">Check the server address before signing in. For Railway use HTTPS and your .up.railway.app host (the app adds /api/v1 if you omit it). On a local PC use your LAN IP and port 3000. Tap Test connection to verify.</string>
+    <string name="login_welcome_title">Welcome back</string>
+    <string name="login_welcome_body">Sign in with your SACCO credentials to manage savings, loans, and repayments securely.</string>
+    <string name="login_forgot_password">Forgot password?</string>
+    <string name="login_forgot_dialog_title">Password help</string>
+    <string name="login_forgot_dialog_body">Passwords are set or reset by your SACCO administrator. Contact them for access or to reset your password.</string>
+    <string name="login_forgot_dialog_ok">OK</string>
+    <string name="login_secured_https">Encrypted connection (HTTPS)</string>
+    <string name="login_secured_http">Not using HTTPS — prefer HTTPS when available</string>
+    <string name="login_server_sheet_title">API server &amp; connection</string>
+    <string name="login_biometric_button">Fingerprint or face</string>
+    <string name="login_biometric_checkbox">Use fingerprint or face next time after sign-in</string>
+    <string name="login_email_error_invalid">Invalid email format</string>
+    <string name="login_password_error_required">Password is required</string>
+    <string name="biometric_prompt_title">Unlock TrustLedger</string>
+    <string name="biometric_prompt_subtitle">Authenticate to sign in.</string>
+    <string name="biometric_prompt_negative">Cancel</string>
+    <string name="cd_open_server_sheet">Advanced: API server and connection</string>
     <string name="notification_channel_name">TrustLedger updates</string>
     <string name="notification_channel_description">Loan and savings alerts from your group</string>
     <string name="notifications_title">Notifications</string>
