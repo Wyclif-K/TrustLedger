@@ -62,7 +62,7 @@
     background: theme('colors.brand.600');
     border-radius: 0 2px 2px 0;
   }
-  .page-title { @apply text-2xl font-display text-navy-900; }
+  .page-title { @apply text-xl sm:text-2xl font-display text-navy-900 leading-tight; }
   .page-header {
     @apply flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 w-full;
   }

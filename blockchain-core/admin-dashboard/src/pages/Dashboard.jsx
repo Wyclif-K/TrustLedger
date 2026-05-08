@@ -263,6 +263,7 @@ export default function DashboardPage() {
           ) : pendingLoans.length === 0 ? (
             <EmptyState icon={CheckCircle} title="No pending loans" description="All loan applications have been reviewed." />
           ) : (
+            <div className="overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0">
             <table className="table">
               <thead>
                 <tr>
@@ -286,6 +287,7 @@ export default function DashboardPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
