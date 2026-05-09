@@ -22,6 +22,7 @@ const { requireUssdServiceKey } = require('../middleware/ussd-service.middleware
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 router.get('/health', health.health);
+router.get('/health/ussd-bridge', health.ussdBridgeHealth);
 
 // ─── USSD bridge (microservice) — X-Service-Key + USSD_SERVICE_KEY on API ─────
 router.get(

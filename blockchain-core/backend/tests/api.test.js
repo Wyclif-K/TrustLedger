@@ -164,6 +164,16 @@ const SUPER_ADMIN_TOKEN = makeToken('SUPER_ADMIN', 'ADM001', 'admin-uuid-001');
 const MEMBER_TOKEN = makeToken('MEMBER', 'MEM001', 'user-uuid-001');
 const AUDITOR_TOKEN = makeToken('AUDITOR', 'AUD001', 'auditor-uuid-001');
 
+describe('GET /api/v1/health/ussd-bridge', () => {
+  test('returns configured:false when USSD_BRIDGE_PUBLIC_URL is not set', async () => {
+    const res = await request(app).get('/api/v1/health/ussd-bridge');
+    expect(res.status).toBe(200);
+    expect(res.body.configured).toBe(false);
+    expect(res.body.backend).toBe('not_configured');
+    expect(res.body.message).toMatch(/USSD_BRIDGE_PUBLIC_URL/);
+  });
+});
+
 describe('GET /api/v1/health', () => {
   test('returns 200 with service info', async () => {
     const res = await request(app).get('/api/v1/health');

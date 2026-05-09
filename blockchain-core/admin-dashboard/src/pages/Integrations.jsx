@@ -38,7 +38,12 @@ export default function IntegrationsPage() {
       <div className="card p-5">
         <h2 className="text-sm font-semibold text-surface-800 mb-1">Live status</h2>
         <p className="text-xs text-surface-400 mb-4">
-          API health is public; bridge status uses the dev proxy path <code className="text-[11px] bg-surface-100 px-1 rounded">/ussd-bridge/health</code>.
+          API health is public. USSD bridge status is loaded via{' '}
+          <code className="text-[11px] bg-surface-100 px-1 rounded">GET /api/v1/health/ussd-bridge</code>
+          {' '}(the API probes your deployed bridge — set{' '}
+          <code className="text-[11px] bg-surface-100 px-1 rounded">USSD_BRIDGE_PUBLIC_URL</code>{' '}
+          on the server). Local dev can still use the Vite proxy{' '}
+          <code className="text-[11px] bg-surface-100 px-1 rounded">/ussd-bridge/health</code>.
         </p>
         <IntegrationsStatus health={health} healthLoading={healthLoading} />
       </div>

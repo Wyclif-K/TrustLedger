@@ -47,16 +47,46 @@ export const healthApi = {
 }
 
 /**
- * USSD bridge GET /health (Vite dev proxies /ussd-bridge → localhost:4000).
- * Fails if the bridge is not running or proxy is not configured.
+ * USSD bridge GET /health — production uses GET /api/v1/health/ussd-bridge on this API (server-side probe).
+ * Local dev: same endpoint if USSD_BRIDGE_PUBLIC_URL is set; otherwise falls back to Vite proxy /ussd-bridge/health.
  */
 export async function fetchUssdBridgeHealth() {
-  const res = await fetch('/ussd-bridge/health', { credentials: 'omit' })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(text || `HTTP ${res.status}`)
+  const apiOrigin = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '')
+  const proxyPath = '/api/v1/health/ussd-bridge'
+  const primaryUrl = apiOrigin ? `${apiOrigin}${proxyPath}` : proxyPath
+
+  const res = await fetch(primaryUrl, { credentials: 'omit' })
+  const text = await res.text()
+  let data
+  try {
+    data = JSON.parse(text)
+  } catch {
+    throw new Error(
+      `${text.trim().slice(0, 120) || `HTTP ${res.status}`} — Expected JSON from ${primaryUrl}. ` +
+        'Deploy the API with GET /api/v1/health/ussd-bridge or set USSD_BRIDGE_PUBLIC_URL.',
+    )
   }
-  return res.json()
+
+  if (import.meta.env.DEV && data.configured === false) {
+    try {
+      const legacy = await fetch('/ussd-bridge/health', { credentials: 'omit' })
+      if (legacy.ok) {
+        const t2 = await legacy.text()
+        try {
+          return JSON.parse(t2)
+        } catch {
+          /* use API response */
+        }
+      }
+    } catch {
+      /* use API response */
+    }
+  }
+
+  if (!res.ok) {
+    throw new Error(data.message || `HTTP ${res.status}`)
+  }
+  return data
 }
 
 export const notificationsApi = {

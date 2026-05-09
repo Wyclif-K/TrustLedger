@@ -74,8 +74,11 @@ export default function IntegrationsStatus({ health, healthLoading }) {
           : 'warn'
 
   const bridgeHint = bridgeError
-    ? (error?.message || 'Start ussd-service on port 4000 (npm run dev in ussd-bridge/ussd-service).')
-    : null
+    ? (error?.message || 'Could not load USSD bridge status.')
+    : (
+      bridge?.message ||
+      'Production: set USSD_BRIDGE_PUBLIC_URL on the API to your ussd-service public URL. Dev: optional http://127.0.0.1:4000 or Vite proxy /ussd-bridge.'
+    )
 
   return (
     <div>
@@ -127,7 +130,7 @@ export default function IntegrationsStatus({ health, healthLoading }) {
 
       <Row
         label="USSD bridge service"
-        hint={bridgeHint || 'Dev: Vite proxies /ussd-bridge → :4000. Production: configure the same in your reverse proxy.'}
+        hint={bridgeHint}
       >
         <StateIcon kind={bridgeKind} />
         <span className="text-surface-600 text-right max-w-[200px] truncate" title={bridge?.backend}>

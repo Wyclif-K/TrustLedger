@@ -176,6 +176,14 @@ const config = {
     key: stripEnvQuotes(optional('USSD_SERVICE_KEY', '')).trim(),
   },
 
+  /**
+   * Public HTTPS base of the USSD bridge microservice (no path). API probes GET {base}/health for the admin dashboard.
+   * Example: https://your-ussd-bridge.up.railway.app — must match where ussd-service actually runs.
+   */
+  ussdBridge: {
+    publicBaseUrl: stripEnvQuotes(optional('USSD_BRIDGE_PUBLIC_URL', '')).trim(),
+  },
+
   /** Dev recovery: POST /members/:memberId/purge-ledger (chaincode purgeLedgerMember). */
   ledger: {
     allowMemberPurge:
