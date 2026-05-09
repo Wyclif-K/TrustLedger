@@ -177,11 +177,15 @@ const config = {
   },
 
   /**
-   * Public HTTPS base of the USSD bridge microservice (no path). API probes GET {base}/health for the admin dashboard.
-   * Example: https://your-ussd-bridge.up.railway.app — must match where ussd-service actually runs.
+   * USSD bridge: separate microservice URL and/or embedded mount on this API (same Railway URL).
+   * - When USSD_BRIDGE_EMBED=true and ./ussd-service exists next to the API, routes are mounted at USSD_BRIDGE_MOUNT_PATH (default /ussd-bridge).
+   * - USSD_BRIDGE_PUBLIC_URL: optional override for the dashboard probe (full base including path if embedded), e.g. https://host/ussd-bridge
+   * - If unset and embed is on, the API probes loopback http://127.0.0.1:PORT/ussd-bridge/health (no extra env needed).
    */
   ussdBridge: {
     publicBaseUrl: stripEnvQuotes(optional('USSD_BRIDGE_PUBLIC_URL', '')).trim(),
+    embed:         boolEnv('USSD_BRIDGE_EMBED', 'false'),
+    mountPath:     stripEnvQuotes(optional('USSD_BRIDGE_MOUNT_PATH', '/ussd-bridge')),
   },
 
   /** Dev recovery: POST /members/:memberId/purge-ledger (chaincode purgeLedgerMember). */

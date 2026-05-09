@@ -1,5 +1,6 @@
-# Use this folder as the Railway service Root Directory so COPY paths match the Dockerfile.
-# Prevents Gradle/Android detection when the repo also contains an Android project at root.
-# Single-URL deploy: keep default Dockerfile here; set Variables in Railway (see backend/.env.example Railway block).
+# Dockerfile expects build context = Git repo root (COPY blockchain-core/… and ussd-bridge/…).
+# Railway: Root Directory "/" or empty, Dockerfile path "blockchain-core/Dockerfile".
+# Prevents Gradle/Android from hijacking deploy when root contains Android — Dockerfile lives under blockchain-core.
 [build]
 builder = "dockerfile"
+dockerfilePath = "blockchain-core/Dockerfile"

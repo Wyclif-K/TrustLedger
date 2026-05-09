@@ -4,9 +4,35 @@
 
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
+
 const prisma = require('../services/db.service');
 const config = require('../config');
 const fabricService = require('../services/fabric.service');
+
+/** Normalize mount path to /segment with no trailing slash */
+function normalizeMountPath(p) {
+  const s = (p || '/ussd-bridge').trim();
+  const withSlash = s.startsWith('/') ? s : `/${s}`;
+  return withSlash.replace(/\/$/, '') || '/ussd-bridge';
+}
+
+/**
+ * Where GET /health on the bridge can be reached for probing (HTTPS URL or loopback when embedded).
+ */
+function ussdBridgeProbeHealthUrl() {
+  const explicit = config.ussdBridge.publicBaseUrl?.trim();
+  if (explicit) {
+    return `${explicit.replace(/\/$/, '')}/health`;
+  }
+  const embeddedApp = path.join(__dirname, '..', 'ussd-service', 'app.js');
+  if (config.ussdBridge.embed && fs.existsSync(embeddedApp)) {
+    const mp = normalizeMountPath(config.ussdBridge.mountPath);
+    return `http://127.0.0.1:${config.port}${mp}/health`;
+  }
+  return null;
+}
 
 /**
  * GET /api/v1/health/ussd-bridge
@@ -14,8 +40,8 @@ const fabricService = require('../services/fabric.service');
  * a reverse-proxy path like /ussd-bridge (which returns SPA HTML in production).
  */
 async function ussdBridgeHealth(req, res) {
-  const base = config.ussdBridge.publicBaseUrl;
-  if (!base) {
+  const url = ussdBridgeProbeHealthUrl();
+  if (!url) {
     return res.status(200).json({
       success:      false,
       service:      'TrustLedger USSD Bridge',
@@ -24,12 +50,11 @@ async function ussdBridgeHealth(req, res) {
       redis:        { status: 'unknown' },
       backend:      'not_configured',
       message:
-        'Set USSD_BRIDGE_PUBLIC_URL on this API to the bridge base URL (e.g. https://your-ussd-service.up.railway.app), ' +
-        'then redeploy. Without it the dashboard cannot reach GET /health on the bridge.',
+        'Either set USSD_BRIDGE_PUBLIC_URL to an external bridge base URL, or deploy with USSD_BRIDGE_EMBED=true ' +
+        'and the ussd-service app next to the API (see Dockerfile / USSD_BRIDGE_MOUNT_PATH, default /ussd-bridge).',
     });
   }
 
-  const url = `${base.replace(/\/$/, '')}/health`;
   try {
     const controller = new AbortController();
     const timeoutMs = 8000;

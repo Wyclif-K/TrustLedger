@@ -89,8 +89,36 @@ if (config.isDev) {
   app.use(requestLogger);
 }
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
+function normalizeUssdMountPath(p) {
+  const s = (p || '/ussd-bridge').trim();
+  const withSlash = s.startsWith('/') ? s : `/${s}`;
+  return withSlash.replace(/\/$/, '') || '/ussd-bridge';
+}
+
+const ussdMountPrefix = normalizeUssdMountPath(config.ussdBridge.mountPath);
+
+// ─── API routes ───────────────────────────────────────────────────────────────
 app.use(config.apiPrefix, routes);
+
+const ussdEmbedAppPath = path.join(__dirname, 'ussd-service', 'app.js');
+if (config.ussdBridge.embed && fs.existsSync(ussdEmbedAppPath)) {
+  setImmediate(async () => {
+    try {
+      const sessionStore = require('./ussd-service/services/session.service');
+      await sessionStore.connect();
+      require('./ussd-service/services/sms.service').init();
+    } catch (err) {
+      logger.warn(`USSD bridge embed init: ${err.message}`);
+    }
+  });
+  const mountAt = ussdMountPrefix;
+  const ussdApp = require('./ussd-service/app');
+  app.use(mountAt, ussdApp);
+  logger.info(`USSD bridge embedded at ${mountAt} (same origin as API)`);
+} else if (config.ussdBridge.embed && !fs.existsSync(ussdEmbedAppPath)) {
+  logger.warn('USSD_BRIDGE_EMBED is true but ./ussd-service is missing — skipping embed (check Docker COPY)');
+}
+
 
 // ─── Admin SPA (production: Railway Docker serves same origin) ────────────────
 if (config.serveAdmin) {
@@ -101,6 +129,7 @@ if (config.serveAdmin) {
     app.use((req, res, next) => {
       if (req.method !== 'GET' && req.method !== 'HEAD') return next();
       if (req.path.startsWith(config.apiPrefix)) return next();
+      if (req.path.startsWith(ussdMountPrefix)) return next();
       res.sendFile(indexHtml, (err) => (err ? next(err) : undefined));
     });
   }

@@ -1,0 +1,5 @@
+# Monorepo: build context = repository root (Dockerfile COPYs blockchain-core/ and ussd-bridge/).
+# In Railway: set service Root Directory to "/" (repo root), or leave default if the repo root is the project.
+[build]
+builder = "dockerfile"
+dockerfilePath = "blockchain-core/Dockerfile"
