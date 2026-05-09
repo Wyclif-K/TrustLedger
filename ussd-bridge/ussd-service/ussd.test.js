@@ -318,20 +318,22 @@ describe('Option 5 — Loan Repayment', () => {
 // Validation
 // =============================================================================
 describe('Request Validation', () => {
-  test('missing sessionId returns 400', async () => {
+  test('missing sessionId returns 200 with END (Africa\'s Talking expects 200)', async () => {
     const res = await request(app)
       .post('/ussd')
       .type('form')
       .send({ phoneNumber: '+256700123456', text: '' });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('END');
   });
 
-  test('missing phoneNumber returns 400', async () => {
+  test('missing phoneNumber returns 200 with END', async () => {
     const res = await request(app)
       .post('/ussd')
       .type('form')
       .send({ sessionId: 'sess-001', text: '' });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('END');
   });
 });
 

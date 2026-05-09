@@ -17,6 +17,19 @@ function requestLogger(req, res, next) {
   next();
 }
 
+// ── Normalise Africa's Talking body keys (some gateways use different casing) ─
+function normalizeAtUssdBody(req, res, next) {
+  if (!req.body || typeof req.body !== 'object') return next();
+  const b = req.body;
+  const sessionId = b.sessionId ?? b.SessionId;
+  const phoneNumber = b.phoneNumber ?? b.PhoneNumber;
+  const text = b.text ?? b.Text ?? '';
+  if (sessionId != null && sessionId !== '') b.sessionId = String(sessionId).trim();
+  if (phoneNumber != null && phoneNumber !== '') b.phoneNumber = String(phoneNumber).trim();
+  b.text = text === undefined || text === null ? '' : String(text);
+  next();
+}
+
 // ── USSD payload validator ────────────────────────────────────────────────────
 // Africa's Talking sends sessionId, serviceCode, phoneNumber, and text.
 // Reject any request missing required fields early.
@@ -26,7 +39,8 @@ function validateUssdPayload(req, res, next) {
   if (!sessionId || !phoneNumber) {
     logger.warn('Invalid USSD payload — missing sessionId or phoneNumber', req.body);
     res.set('Content-Type', 'text/plain');
-    return res.status(400).send('END Invalid request.');
+    /** Africa's Talking treats non-200 as failure → generic "network error" in simulator */
+    return res.status(200).send('END Invalid request.');
   }
 
   // Normalise phone: ensure it starts with +
@@ -53,7 +67,7 @@ function ipWhitelist(req, res, next) {
   if (!allowed) {
     logger.warn(`Blocked request from IP: ${clientIp}`);
     res.set('Content-Type', 'text/plain');
-    return res.status(403).send('END Forbidden.');
+    return res.status(200).send('END Forbidden.');
   }
 
   next();
@@ -63,7 +77,8 @@ function ipWhitelist(req, res, next) {
 function errorHandler(err, req, res, next) {
   logger.error('Unhandled error:', err.message, err.stack);
   res.set('Content-Type', 'text/plain');
-  res.status(500).send('END Service error. Please try again.');
+  /** USSD gateways often treat non-200 as complete failure → generic carrier error */
+  res.status(200).send('END Service error. Please try again.');
 }
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
@@ -71,4 +86,11 @@ function notFound(req, res) {
   res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.originalUrl}` });
 }
 
-module.exports = { requestLogger, validateUssdPayload, ipWhitelist, errorHandler, notFound };
+module.exports = {
+  requestLogger,
+  normalizeAtUssdBody,
+  validateUssdPayload,
+  ipWhitelist,
+  errorHandler,
+  notFound,
+};

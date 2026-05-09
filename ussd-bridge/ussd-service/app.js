@@ -14,7 +14,7 @@ const morgan     = require('morgan');
 const config  = require('./config');
 const logger  = require('./config/logger');
 const {
-  requestLogger, validateUssdPayload,
+  requestLogger, validateUssdPayload, normalizeAtUssdBody,
   ipWhitelist, errorHandler, notFound,
 } = require('./middleware');
 const { routeUssdRequest } = require('./handlers/router');
@@ -75,6 +75,7 @@ app.get('/ussd', (req, res) => {
 
 // ── USSD webhook (Africa's Talking / MTN / Airtel) ────────────────────────────
 app.post('/ussd',
+  normalizeAtUssdBody,
   ipWhitelist,
   validateUssdPayload,
   async (req, res) => {
