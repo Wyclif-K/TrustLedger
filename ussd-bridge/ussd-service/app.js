@@ -65,6 +65,14 @@ app.get('/health', async (req, res) => {
   });
 });
 
+// ── GET /ussd — ping / browser (Africa's Talking sends POST only for live USSD) ─
+app.get('/ussd', (req, res) => {
+  res.type('text/plain');
+  res.status(200).send(
+    'TrustLedger USSD webhook OK. Live traffic uses POST with url-encoded sessionId, phoneNumber, text.',
+  );
+});
+
 // ── USSD webhook (Africa's Talking / MTN / Airtel) ────────────────────────────
 app.post('/ussd',
   ipWhitelist,
