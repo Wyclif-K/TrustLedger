@@ -16,10 +16,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -46,6 +48,7 @@ import com.example.trustledger.ui.components.SkeletonBlock
 import com.example.trustledger.ui.components.TlAccentCard
 import com.example.trustledger.ui.components.TlCompactCard
 import com.example.trustledger.ui.components.TlEmptyState
+import com.example.trustledger.ui.theme.BrandNavy
 import com.example.trustledger.ui.components.TlPrimaryButton
 import com.example.trustledger.ui.components.TlNotificationBellButton
 import com.example.trustledger.ui.components.TlSectionHeader
@@ -155,27 +158,47 @@ fun LoansScreen(
                     )
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = when {
-                            savingsBal == null ->
-                                "Loan size is capped at 3× your on-chain savings. Pull down to refresh your balance."
-                            savingsBal <= 0.0 ->
-                                "Your savings on the ledger are ${vm.formatUgX(savingsBal)}. Deposit on Home first; " +
-                                    "then you can apply up to about ${vm.formatUgX(maxBorrowApprox)} (3× savings)."
-                            else ->
-                                "Savings on ledger: ${vm.formatUgX(savingsBal)}. " +
-                                    "You can apply for up to about ${vm.formatUgX(maxBorrowApprox)} (3× savings), " +
-                                    "subject to other rules."
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(14.dp),
-                    )
+                TlAccentCard {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp),
+                        )
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            Text(
+                                text = "Loan eligibility",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                            Text(
+                                text = when {
+                                    savingsBal == null ->
+                                        "Maximum loan size is 3× your on-chain savings. Pull down " +
+                                            "to refresh your balance."
+                                    savingsBal <= 0.0 ->
+                                        "Ledger savings are ${vm.formatUgX(savingsBal)}. " +
+                                            "Deposit on Home first; you could then borrow up " +
+                                            "to about ${vm.formatUgX(maxBorrowApprox)} (3× savings)."
+                                    else ->
+                                        "Ledger savings: ${vm.formatUgX(savingsBal)}. " +
+                                            "You may borrow up to about ${vm.formatUgX(maxBorrowApprox)} " +
+                                            "(3× savings), subject to other lending rules."
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                        }
+                    }
                 }
 
                 TlSectionHeader(
@@ -312,12 +335,21 @@ fun LoansScreen(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(22.dp),
                                     strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    color = BrandNavy,
                                 )
-                                Text("Submitting…", style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "Submitting…",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = BrandNavy,
+                                )
                             }
                         } else {
-                            Text("Submit application", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "Submit application",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = BrandNavy,
+                            )
                         }
                     }
                 }
@@ -385,12 +417,21 @@ fun LoansScreen(
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(22.dp),
                                     strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    color = BrandNavy,
                                 )
-                                Text("Submitting…", style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "Submitting…",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = BrandNavy,
+                                )
                             }
                         } else {
-                            Text("Submit repayment", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "Submit repayment",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = BrandNavy,
+                            )
                         }
                     }
                 }

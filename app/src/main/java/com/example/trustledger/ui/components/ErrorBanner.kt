@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.trustledger.ui.theme.BrandGoldBright
 
 @Composable
 fun ErrorBanner(
@@ -45,12 +47,22 @@ fun ErrorBanner(
             Spacer(modifier = Modifier.width(8.dp))
 
             if (onRetry != null) {
-                TextButton(onClick = onRetry) {
+                TextButton(
+                    onClick = onRetry,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = BrandGoldBright,
+                    ),
+                ) {
                     Text(text = "Retry")
                 }
             }
             if (onDismiss != null) {
-                TextButton(onClick = onDismiss) {
+                TextButton(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f),
+                    ),
+                ) {
                     Text(text = "Dismiss")
                 }
             }

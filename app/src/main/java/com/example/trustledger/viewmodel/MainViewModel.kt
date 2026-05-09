@@ -39,6 +39,12 @@ import java.util.Locale
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
+    /** Shown on the scaffold snackbar host; [successAccent] drives success styling after password change etc. */
+    data class SnackbarNotice(
+        val message: String,
+        val successAccent: Boolean = false,
+    )
+
     private var api: TrustLedgerApi = TrustLedgerBackend.api(application)
     private val prefs = application.getSharedPreferences(TrustLedgerPrefs.NAME, Context.MODE_PRIVATE)
 
@@ -109,7 +115,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var errorMessage by mutableStateOf<String?>(null)
         private set
 
-    var snackbarMessage by mutableStateOf<String?>(null)
+    var snackbarNotice by mutableStateOf<SnackbarNotice?>(null)
+        private set
+
+    var passwordChangeInProgress by mutableStateOf(false)
         private set
 
     var connectionTestRunning by mutableStateOf(false)
@@ -187,7 +196,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         api = TrustLedgerBackend.api(getApplication())
         if (accessToken != null && urlChanged) {
             clearLocalSessionForServerChange()
-            snackbarMessage = "Server URL updated. Please sign in again."
+            snackbarNotice = SnackbarNotice("Server URL updated. Please sign in again.")
         }
         return null
     }
@@ -212,7 +221,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun consumeSnackbar() {
-        snackbarMessage = null
+        snackbarNotice = null
     }
 
     init {
@@ -438,7 +447,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun changePassword(currentPassword: String, newPassword: String) {
         viewModelScope.launch {
-            isLoading = true
+            passwordChangeInProgress = true
             errorMessage = null
             try {
                 val token = accessToken ?: run {
@@ -453,13 +462,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     errorMessage = env.message ?: "Could not change password"
                     return@launch
                 }
-                snackbarMessage = env.message ?: "Password changed. Please sign in again."
+                snackbarNotice = SnackbarNotice(
+                    message = "Password updated successfully. For your security, you've been " +
+                        "signed out everywhere. Sign back in using your new password.",
+                    successAccent = true,
+                )
                 SecureCredentialStore.clear(getApplication())
                 logoutInternal(clearSnackbar = false)
             } catch (e: Exception) {
                 errorMessage = humanReadableApiError(e)
             } finally {
-                isLoading = false
+                passwordChangeInProgress = false
             }
         }
     }
@@ -479,7 +492,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         notifications = emptyList()
         unreadBaselineEstablished = false
         errorMessage = null
-        if (clearSnackbar) snackbarMessage = null
+        if (clearSnackbar) snackbarNotice = null
         syncLauncherIcon()
         refreshBiometricLoginAvailability()
     }
@@ -583,7 +596,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     throw RuntimeException(env.message ?: "Failed to apply loan")
                 }
                 loadLoans()
-                snackbarMessage = "Loan application submitted successfully."
+                snackbarNotice = SnackbarNotice("Loan application submitted successfully.")
             } catch (e: Exception) {
                 loanMutationError = humanReadableApiError(e)
             } finally {
@@ -611,7 +624,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
                 loadLoans()
                 loadBalance()
-                snackbarMessage = "Repayment recorded successfully."
+                snackbarNotice = SnackbarNotice("Repayment recorded successfully.")
             } catch (e: Exception) {
                 loanMutationError = humanReadableApiError(e)
             } finally {

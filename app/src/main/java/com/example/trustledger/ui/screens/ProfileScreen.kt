@@ -1,7 +1,8 @@
 package com.example.trustledger.ui.screens
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,13 +23,12 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -42,6 +43,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -49,14 +52,134 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.trustledger.ui.components.TlNotificationBellButton
+import com.example.trustledger.ui.theme.BrandNavy
+import com.example.trustledger.ui.components.TlGoldOutlineButton
 import com.example.trustledger.ui.components.TlAccentCard
 import com.example.trustledger.ui.components.TlAvatarLetter
+import com.example.trustledger.ui.components.TlBlockchainTrustBadge
 import com.example.trustledger.ui.components.TlPrimaryButton
 import com.example.trustledger.ui.components.TlSectionHeader
 import com.example.trustledger.ui.components.TlTopBarTitle
 import com.example.trustledger.viewmodel.MainViewModel
 
 private val FieldShape = RoundedCornerShape(14.dp)
+
+/** Gap between Current / New(+meter) / Confirm(+match) blocks — uniform vertical rhythm */
+private val PasswordSectionSpacing = 16.dp
+
+private enum class PasswordStrength {
+    NONE, WEAK, MEDIUM, STRONG,
+}
+
+private fun evaluatePasswordStrength(password: String): PasswordStrength {
+    if (password.isEmpty()) return PasswordStrength.NONE
+    val hasLower = password.any { it.isLowerCase() }
+    val hasUpper = password.any { it.isUpperCase() }
+    val hasDigit = password.any { it.isDigit() }
+    val hasSymbol = password.any { !it.isLetterOrDigit() }
+    val charsetScore = listOf(hasLower, hasUpper, hasDigit, hasSymbol).count { it }
+    val len = password.length
+
+    return when {
+        len < 8 || charsetScore <= 1 -> PasswordStrength.WEAK
+        charsetScore >= 4 && len >= 12 -> PasswordStrength.STRONG
+        charsetScore == 4 && len >= 10 -> PasswordStrength.STRONG
+        charsetScore >= 3 && len >= 11 -> PasswordStrength.STRONG
+        len >= 8 && charsetScore >= 2 -> PasswordStrength.MEDIUM
+        else -> PasswordStrength.WEAK
+    }
+}
+
+@Composable
+private fun PasswordStrengthIndicator(password: String) {
+    val strength = evaluatePasswordStrength(password)
+    if (strength == PasswordStrength.NONE) return
+
+    val inactive = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            for (segment in 0 until 3) {
+                val fillLevel = when (strength) {
+                    PasswordStrength.WEAK -> 1
+                    PasswordStrength.MEDIUM -> 2
+                    PasswordStrength.STRONG -> 3
+                    PasswordStrength.NONE -> 0
+                }
+                val color = when {
+                    segment >= fillLevel -> inactive
+                    strength == PasswordStrength.WEAK ->
+                        MaterialTheme.colorScheme.error
+                    strength == PasswordStrength.MEDIUM ->
+                        MaterialTheme.colorScheme.tertiary
+                    else ->
+                        Color(0xFF2E7D32)
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(color),
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = when (strength) {
+                PasswordStrength.WEAK -> "Weak"
+                PasswordStrength.MEDIUM -> "Medium"
+                PasswordStrength.STRONG -> "Strong"
+                PasswordStrength.NONE -> ""
+            },
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = when (strength) {
+                PasswordStrength.WEAK -> MaterialTheme.colorScheme.error
+                PasswordStrength.MEDIUM -> MaterialTheme.colorScheme.tertiary
+                PasswordStrength.STRONG -> Color(0xFF2E7D32)
+                PasswordStrength.NONE -> MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+    }
+}
+
+@Composable
+private fun ConfirmPasswordMatchRow(
+    confirmPassword: String,
+    matches: Boolean,
+) {
+    if (confirmPassword.isEmpty()) return
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = if (matches) "✅" else "❌",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Text(
+            text = if (matches) {
+                "Matches new password"
+            } else {
+                "Does not match new password"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -184,114 +307,125 @@ fun ProfileScreen(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = currentPassword,
-                    onValueChange = { currentPassword = it },
-                    label = { Text("Current password") },
-                    singleLine = true,
-                    enabled = !vm.isLoading,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = FieldShape,
-                    colors = fieldColors,
-                    visualTransformation = if (showCurrent) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Next,
-                    ),
-                    trailingIcon = {
-                        IconButton(onClick = { showCurrent = !showCurrent }) {
-                            Icon(
-                                imageVector = if (showCurrent) {
-                                    Icons.Outlined.VisibilityOff
-                                } else {
-                                    Icons.Outlined.Visibility
-                                },
-                                contentDescription = if (showCurrent) "Hide" else "Show",
-                            )
-                        }
-                    },
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = newPassword,
-                    onValueChange = { newPassword = it },
-                    label = { Text("New password") },
-                    singleLine = true,
-                    enabled = !vm.isLoading,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = FieldShape,
-                    colors = fieldColors,
-                    isError = newPassword.isNotBlank() && !newOk,
-                    supportingText = {
+                Column(verticalArrangement = Arrangement.spacedBy(PasswordSectionSpacing)) {
+                    OutlinedTextField(
+                        value = currentPassword,
+                        onValueChange = { currentPassword = it },
+                        label = { Text("Current password") },
+                        singleLine = true,
+                        enabled = !vm.passwordChangeInProgress,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = FieldShape,
+                        colors = fieldColors,
+                        visualTransformation = if (showCurrent) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Next,
+                        ),
+                        trailingIcon = {
+                            IconButton(onClick = { showCurrent = !showCurrent }) {
+                                Icon(
+                                    imageVector = if (showCurrent) {
+                                        Icons.Outlined.VisibilityOff
+                                    } else {
+                                        Icons.Outlined.Visibility
+                                    },
+                                    contentDescription = if (showCurrent) "Hide" else "Show",
+                                )
+                            }
+                        },
+                    )
+
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = newPassword,
+                            onValueChange = { newPassword = it },
+                            label = { Text("New password") },
+                            singleLine = true,
+                            enabled = !vm.passwordChangeInProgress,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = FieldShape,
+                            colors = fieldColors,
+                            isError = newPassword.isNotBlank() && !newOk,
+                            supportingText = null,
+                            visualTransformation = if (showNew) {
+                                VisualTransformation.None
+                            } else {
+                                PasswordVisualTransformation()
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Next,
+                            ),
+                            trailingIcon = {
+                                IconButton(onClick = { showNew = !showNew }) {
+                                    Icon(
+                                        imageVector = if (showNew) {
+                                            Icons.Outlined.VisibilityOff
+                                        } else {
+                                            Icons.Outlined.Visibility
+                                        },
+                                        contentDescription = if (showNew) "Hide" else "Show",
+                                    )
+                                }
+                            },
+                        )
+                        PasswordStrengthIndicator(newPassword)
                         if (newPassword.isNotBlank() && !newOk) {
-                            Text("Use at least 8 characters")
-                        }
-                    },
-                    visualTransformation = if (showNew) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Next,
-                    ),
-                    trailingIcon = {
-                        IconButton(onClick = { showNew = !showNew }) {
-                            Icon(
-                                imageVector = if (showNew) {
-                                    Icons.Outlined.VisibilityOff
-                                } else {
-                                    Icons.Outlined.Visibility
-                                },
-                                contentDescription = if (showNew) "Hide" else "Show",
+                            Text(
+                                text = "Use at least 8 characters.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(top = 4.dp),
                             )
                         }
-                    },
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = confirmPassword,
-                    onValueChange = { confirmPassword = it },
-                    label = { Text("Confirm new password") },
-                    singleLine = true,
-                    enabled = !vm.isLoading,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = FieldShape,
-                    colors = fieldColors,
-                    isError = confirmPassword.isNotBlank() && !matchOk,
-                    supportingText = {
-                        if (confirmPassword.isNotBlank() && !matchOk) {
-                            Text("Passwords do not match")
-                        }
-                    },
-                    visualTransformation = if (showConfirm) {
-                        VisualTransformation.None
-                    } else {
-                        PasswordVisualTransformation()
-                    },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Password,
-                        imeAction = ImeAction.Done,
-                    ),
-                    trailingIcon = {
-                        IconButton(onClick = { showConfirm = !showConfirm }) {
-                            Icon(
-                                imageVector = if (showConfirm) {
-                                    Icons.Outlined.VisibilityOff
-                                } else {
-                                    Icons.Outlined.Visibility
-                                },
-                                contentDescription = if (showConfirm) "Hide" else "Show",
-                            )
-                        }
-                    },
-                )
-                Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = confirmPassword,
+                            onValueChange = { confirmPassword = it },
+                            label = { Text("Confirm new password") },
+                            singleLine = true,
+                            enabled = !vm.passwordChangeInProgress,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = FieldShape,
+                            colors = fieldColors,
+                            isError = confirmPassword.isNotBlank() && !matchOk,
+                            supportingText = null,
+                            visualTransformation = if (showConfirm) {
+                                VisualTransformation.None
+                            } else {
+                                PasswordVisualTransformation()
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Password,
+                                imeAction = ImeAction.Done,
+                            ),
+                            trailingIcon = {
+                                IconButton(onClick = { showConfirm = !showConfirm }) {
+                                    Icon(
+                                        imageVector = if (showConfirm) {
+                                            Icons.Outlined.VisibilityOff
+                                        } else {
+                                            Icons.Outlined.Visibility
+                                        },
+                                        contentDescription = if (showConfirm) "Hide" else "Show",
+                                    )
+                                }
+                            },
+                        )
+                        ConfirmPasswordMatchRow(
+                            confirmPassword = confirmPassword,
+                            matches = matchOk && newPassword.isNotBlank(),
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(16.dp))
                 vm.errorMessage?.takeIf { it.isNotBlank() }?.let { msg ->
                     Surface(
                         shape = RoundedCornerShape(12.dp),
@@ -314,34 +448,49 @@ fun ProfileScreen(
                             newPassword = newPassword,
                         )
                     },
-                    enabled = !vm.isLoading &&
+                    enabled = !vm.passwordChangeInProgress &&
                         currentPassword.isNotBlank() &&
                         newOk &&
                         matchOk,
+                    fullContrastWhileInactive = vm.passwordChangeInProgress,
                 ) {
-                    Text("Update password", style = MaterialTheme.typography.titleSmall)
+                    when {
+                        vm.passwordChangeInProgress -> {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.5.dp,
+                                modifier = Modifier.size(22.dp),
+                                color = BrandNavy,
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Updating password…",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = BrandNavy,
+                            )
+                        }
+                        else -> Text(
+                            text = "Update password",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = BrandNavy,
+                        )
+                    }
                 }
             }
 
-            OutlinedButton(
+            TlGoldOutlineButton(
                 onClick = onLogout,
-                enabled = !vm.isLoading,
+                enabled = !vm.passwordChangeInProgress,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.secondary,
-                ),
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = "Sign out")
-                }
+                Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Sign out")
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            TlBlockchainTrustBadge()
 
             Spacer(modifier = Modifier.height(24.dp))
         }

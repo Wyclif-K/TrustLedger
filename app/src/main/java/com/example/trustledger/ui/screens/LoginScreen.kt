@@ -1,10 +1,7 @@
 package com.example.trustledger.ui.screens
 
 import android.util.Patterns
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +22,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CloudDone
@@ -38,6 +34,7 @@ import androidx.compose.material.icons.outlined.SettingsEthernet
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -48,7 +45,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -56,7 +52,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,7 +62,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -78,6 +72,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.trustledger.R
+import com.example.trustledger.ui.components.TlGoldOutlineButton
+import com.example.trustledger.ui.components.TlPrimaryButton
 import com.example.trustledger.ui.theme.BrandGold
 import com.example.trustledger.ui.theme.BrandGoldBright
 import com.example.trustledger.ui.theme.BrandNavy
@@ -162,7 +158,10 @@ fun LoginScreen(
         AlertDialog(
             onDismissRequest = { showForgotDialog = false },
             confirmButton = {
-                TextButton(onClick = { showForgotDialog = false }) {
+                TextButton(
+                    onClick = { showForgotDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = BrandGoldBright),
+                ) {
                     Text(stringResource(R.string.login_forgot_dialog_ok))
                 }
             },
@@ -453,6 +452,7 @@ fun LoginScreen(
                             TextButton(
                                 onClick = { showForgotDialog = true },
                                 enabled = !isLoading,
+                                colors = ButtonDefaults.textButtonColors(contentColor = BrandGoldBright),
                             ) {
                                 Text(stringResource(R.string.login_forgot_password))
                             }
@@ -496,61 +496,27 @@ fun LoginScreen(
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.82f),
                             )
                         }
-                        val continueShape = RoundedCornerShape(14.dp)
-                        val continueInteraction = remember { MutableInteractionSource() }
                         val canTapContinue = canAttemptSubmit && !isLoading
-                        val continueDimmed = !canTapContinue && !isLoading
-                        val continueFill = Brush.horizontalGradient(
-                            colors = listOf(BrandGoldBright, BrandGold, BrandGoldBright),
-                        )
-                        val continueStroke = BrandNavy.copy(alpha = if (continueDimmed) 0.75f else 1f)
-                        val continueLabel =
-                            BrandNavy.copy(alpha = if (continueDimmed) 0.65f else 1f)
+                        val labelMuted = !canTapContinue && !isLoading
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 52.dp)
-                                .shadow(
-                                    elevation = 12.dp,
-                                    shape = continueShape,
-                                    ambientColor = BrandNavy.copy(alpha = 0.38f),
-                                    spotColor = BrandGoldBright.copy(alpha = 0.65f),
-                                )
-                                .clip(continueShape)
-                                .border(2.dp, continueStroke, continueShape)
-                                .background(
-                                    brush = continueFill,
-                                    shape = continueShape,
-                                    alpha = if (continueDimmed) 0.78f else 1f,
-                                )
-                                .clickable(
-                                    interactionSource = continueInteraction,
-                                    indication = ripple(
-                                        bounded = true,
-                                        color = BrandNavy.copy(alpha = 0.18f),
-                                    ),
-                                    enabled = canTapContinue,
-                                    onClick = {
-                                        if (!validateForm()) return@clickable
-                                        onLogin(email.trim(), password, saveForBiometric)
-                                    },
-                                )
-                                .padding(vertical = 14.dp),
-                            contentAlignment = Alignment.Center,
+                        TlPrimaryButton(
+                            onClick = {
+                                if (!validateForm()) return@TlPrimaryButton
+                                onLogin(email.trim(), password, saveForBiometric)
+                            },
+                            enabled = canTapContinue,
+                            fullContrastWhileInactive = isLoading,
                         ) {
                             when {
-                                isLoading -> Row(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
+                                isLoading -> {
                                     CircularProgressIndicator(
                                         strokeWidth = 2.5.dp,
                                         modifier = Modifier.size(22.dp),
                                         color = BrandNavy,
                                     )
+                                    Spacer(modifier = Modifier.width(12.dp))
                                     Text(
-                                        "Signing in…",
+                                        text = "Signing in…",
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = FontWeight.SemiBold,
                                         color = BrandNavy,
@@ -560,18 +526,14 @@ fun LoginScreen(
                                     text = "Continue",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = continueLabel,
+                                    color = BrandNavy.copy(alpha = if (labelMuted) 0.65f else 1f),
                                 )
                             }
                         }
                         if (biometricLoginAvailable) {
-                            OutlinedButton(
+                            TlGoldOutlineButton(
                                 onClick = onBiometricLoginClick,
                                 enabled = !isLoading,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 48.dp),
-                                shape = RoundedCornerShape(14.dp),
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Fingerprint,
@@ -701,6 +663,7 @@ private fun LoginApiServerCard(
                     onClick = onOpenSettings,
                     enabled = !isLoading,
                     shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.textButtonColors(contentColor = BrandGoldBright),
                 ) {
                     Icon(
                         Icons.Outlined.SettingsEthernet,
@@ -717,6 +680,7 @@ private fun LoginApiServerCard(
                     },
                     enabled = !isLoading && !connectionTestRunning,
                     shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.textButtonColors(contentColor = BrandGoldBright),
                 ) {
                     Icon(
                         Icons.Outlined.CloudDone,

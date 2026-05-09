@@ -31,4 +31,11 @@
     <string name="notifications_tap_to_view">Open the app to read details</string>
     <string name="cd_notifications">Notifications</string>
     <string name="cd_unread_notifications">Unread notifications</string>
+    <!-- HTTPS page that explains or links to on-chain / audit verification; update for your deployment. -->
+    <string name="trustledger_verify_data_url" translatable="false">http://trustledger-production-38cb.up.railway.app/api/v1/verify</string>
+    <string name="blockchain_badge_title">Powered by TrustLedger Blockchain</string>
+    <string name="blockchain_badge_body">Savings balances, loans, and repayments are anchored for transparency—you can confirm your records match what the network stores.</string>
+    <string name="blockchain_verify_link">Verify your data</string>
+    <string name="cd_verify_data_link">Open verify your data link in browser</string>
+    <string name="settings_about_version_label">App version</string>
 </resources>

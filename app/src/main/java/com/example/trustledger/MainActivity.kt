@@ -14,8 +14,11 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -65,10 +68,25 @@ class MainActivity : FragmentActivity() {
             }
 
             val snackbarHostState = remember { SnackbarHostState() }
-            LaunchedEffect(vm.snackbarMessage) {
-                val msg = vm.snackbarMessage
-                if (!msg.isNullOrBlank()) {
-                    snackbarHostState.showSnackbar(msg)
+            var snackbarSuccessAccent by remember { mutableStateOf(false) }
+
+            LaunchedEffect(vm.snackbarNotice) {
+                val notice = vm.snackbarNotice ?: return@LaunchedEffect
+                val message = notice.message
+                if (message.isBlank()) return@LaunchedEffect
+                snackbarSuccessAccent = notice.successAccent
+                try {
+                    snackbarHostState.showSnackbar(
+                        message = message,
+                        duration = if (notice.successAccent) {
+                            SnackbarDuration.Long
+                        } else {
+                            SnackbarDuration.Short
+                        },
+                        withDismissAction = notice.successAccent,
+                    )
+                } finally {
+                    snackbarSuccessAccent = false
                     vm.consumeSnackbar()
                 }
             }
@@ -96,6 +114,26 @@ class MainActivity : FragmentActivity() {
                                 modifier = Modifier
                                     .navigationBarsPadding()
                                     .padding(bottom = 8.dp),
+                                snackbar = { data ->
+                                    val success = snackbarSuccessAccent
+                                    if (success) {
+                                        Snackbar(
+                                            snackbarData = data,
+                                            shape = RoundedCornerShape(14.dp),
+                                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                                            actionContentColor = MaterialTheme.colorScheme.primary,
+                                            dismissActionContentColor = MaterialTheme.colorScheme.onTertiaryContainer.copy(
+                                                alpha = 0.88f,
+                                            ),
+                                        )
+                                    } else {
+                                        Snackbar(
+                                            snackbarData = data,
+                                            shape = RoundedCornerShape(14.dp),
+                                        )
+                                    }
+                                },
                             )
                         },
                     ) { padding ->

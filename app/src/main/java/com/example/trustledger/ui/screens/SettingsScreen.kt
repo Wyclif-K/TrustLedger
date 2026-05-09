@@ -1,7 +1,6 @@
 package com.example.trustledger.ui.screens
 
 import android.os.Build
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,13 +25,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -47,11 +46,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.trustledger.BuildConfig
 import com.example.trustledger.R
+import com.example.trustledger.ui.components.TlGoldOutlineButton
 import com.example.trustledger.ui.components.TlAccentCard
 import com.example.trustledger.ui.components.TlPrimaryButton
 import com.example.trustledger.ui.components.TlSettingsSectionLabel
 import com.example.trustledger.ui.components.TlTopBarTitle
+import com.example.trustledger.ui.theme.BrandGoldBright
+import com.example.trustledger.ui.theme.BrandNavy
 import com.example.trustledger.viewmodel.MainViewModel
 
 private val FieldShape = RoundedCornerShape(14.dp)
@@ -150,11 +153,10 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    OutlinedButton(
+                    TlGoldOutlineButton(
                         onClick = { vm.runConnectionTest(serverUrl) },
                         enabled = !vm.isLoading && !vm.connectionTestRunning,
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                        modifier = Modifier.weight(1f),
                     ) {
                         Icon(
                             Icons.Outlined.CloudDone,
@@ -221,7 +223,12 @@ fun SettingsScreen(
                     },
                     enabled = !vm.isLoading && serverUrl.isNotBlank(),
                 ) {
-                    Text("Save server URL", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Save server URL",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = BrandNavy,
+                    )
                 }
             }
 
@@ -256,6 +263,9 @@ fun SettingsScreen(
                         TextButton(
                             onClick = { vm.cycleThemeMode() },
                             enabled = !vm.isLoading,
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = BrandGoldBright,
+                            ),
                         ) {
                             Text(
                                 text = when (vm.themeMode) {
@@ -263,7 +273,6 @@ fun SettingsScreen(
                                     MainViewModel.ThemeMode.LIGHT -> "Light"
                                     MainViewModel.ThemeMode.DARK -> "Dark"
                                 },
-                                color = MaterialTheme.colorScheme.secondary,
                             )
                         }
                     },
@@ -287,6 +296,28 @@ fun SettingsScreen(
                             enabled = dynamicSupported && !vm.isLoading,
                         )
                     },
+                )
+            }
+
+            TlSettingsSectionLabel("About")
+            TlAccentCard {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.secondary,
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "${stringResource(R.string.settings_about_version_label)} ${BuildConfig.VERSION_NAME} " +
+                        "(${BuildConfig.VERSION_CODE})",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 

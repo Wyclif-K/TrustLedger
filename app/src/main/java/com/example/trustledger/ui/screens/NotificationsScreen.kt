@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,6 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.trustledger.R
+import com.example.trustledger.ui.theme.BrandGoldBright
 import com.example.trustledger.data.NotificationDto
 import com.example.trustledger.ui.components.ErrorBanner
 import com.example.trustledger.ui.components.SkeletonBlock
@@ -79,6 +81,9 @@ fun NotificationsScreen(
                         TextButton(
                             onClick = { vm.markAllNotificationsRead() },
                             enabled = !vm.notificationsBusy,
+                            colors = ButtonDefaults.textButtonColors(
+                                contentColor = BrandGoldBright,
+                            ),
                         ) {
                             Text(stringResource(R.string.notifications_mark_all_read))
                         }
