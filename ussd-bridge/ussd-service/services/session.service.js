@@ -61,12 +61,20 @@ async function connect() {
   }
 
   try {
+    const redisUrl = config.redis.url;
+    const socket =
+      redisUrl.startsWith('rediss://')
+        ? {
+            tls:               true,
+            reconnectStrategy: () => false,
+          }
+        : {
+            reconnectStrategy: () => false,
+          };
+
     client = createClient({
-      url: config.redis.url,
-      socket: {
-        // Default strategy reconnects forever; each attempt emits `error` → log spam.
-        reconnectStrategy: () => false,
-      },
+      url:    redisUrl,
+      socket,
     });
 
     client.on('error', (err) => {
@@ -144,14 +152,23 @@ async function deleteSession(sessionId) {
   memStore.delete(sessionId);
 }
 
-// ── Health check ──────────────────────────────────────────────────────────────
+/** Used by GET /health — distinguish Redis up vs in-memory fallback */
 async function ping() {
+  if (!config.redis.enabled) {
+    return { status: 'disabled', connected: false };
+  }
   try {
-    if (client && connected) {
+    if (client) {
       await client.ping();
       return { status: 'redis', connected: true };
     }
-  } catch {}
+  } catch (e) {
+    return {
+      status:    'redis',
+      connected: false,
+      error:     e && e.message ? String(e.message) : 'ping failed',
+    };
+  }
   return { status: 'memory', connected: false };
 }
 
