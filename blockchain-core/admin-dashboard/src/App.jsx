@@ -12,6 +12,7 @@ import DashboardPage from '@/pages/Dashboard'
 import MembersPage   from '@/pages/Members'
 import MemberDetail  from '@/pages/MemberDetail'
 import LoansPage     from '@/pages/Loans'
+import SavingsPage   from '@/pages/Savings'
 import ReportsPage   from '@/pages/Reports'
 import AuditPage       from '@/pages/Audit'
 import IntegrationsPage from '@/pages/Integrations'
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="dashboard"          element={<DashboardPage />} />
           <Route path="members"            element={<MembersPage />} />
           <Route path="members/:memberId"  element={<MemberDetail />} />
+          <Route path="savings"            element={<SavingsPage />} />
           <Route path="loans"              element={<LoansPage />} />
           <Route path="reports"            element={<ReportsPage />} />
           <Route path="audit"              element={<AuditPage />} />

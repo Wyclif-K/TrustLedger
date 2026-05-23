@@ -127,6 +127,9 @@ export const loansApi = {
   disburse: (id, data) => api.post(`/loans/${id}/disburse`, data),
   repay: (id, data) => api.post(`/loans/${id}/repay`, data),
 }
+export const savingsApi = {
+  overview: () => api.get('/savings'),
+}
 export const reportsApi = {
   dashboard: () => api.get('/reports/dashboard'),
   monthlyTrends: (params) => api.get('/reports/monthly-trends', { params }),

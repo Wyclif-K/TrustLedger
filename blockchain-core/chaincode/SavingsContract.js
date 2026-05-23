@@ -334,6 +334,18 @@ class SavingsContract extends Contract {
     );
   }
 
+  // ─── Get All Savings Accounts ─────────────────────────────────────────────
+  /**
+   * List every savings account on the ledger (admin dashboard).
+   */
+  async getAllSavingsAccounts(ctx) {
+    requireRole(ctx, 'admin', 'auditor');
+    const rows = await richQuery(ctx, {
+      selector: { docType: 'savings' },
+    });
+    return rows.sort((a, b) => Number(b.balance || 0) - Number(a.balance || 0));
+  }
+
   /**
    * Remove member + savings state so the same memberId can be registered again.
    * Admin only. Balance must be zero; no PENDING/APPROVED/DISBURSED loans for this member.

@@ -52,6 +52,16 @@ jest.mock('../services/fabric.service', () => {
         if (fn === 'getBalance')          return Promise.resolve(mockSavings);
         if (fn === 'getMemberTransactions') return Promise.resolve([]);
         if (fn === 'getSavingsHistory')   return Promise.resolve([]);
+        if (fn === 'getAllSavingsAccounts') {
+          return Promise.resolve([{
+            memberId: 'MEM001',
+            balance: 1500000,
+            totalDeposited: 2000000,
+            totalWithdrawn: 500000,
+            transactionCount: 3,
+            updatedAt: new Date().toISOString(),
+          }]);
+        }
         return Promise.resolve({});
       }),
     },
@@ -79,7 +89,30 @@ jest.mock('../services/fabric.service', () => {
       submit:   jest.fn().mockResolvedValue({ success: true }),
       evaluate: jest.fn().mockImplementation((fn) => {
         if (fn === 'getSaccoStats')         return Promise.resolve({ members: { total: 5 }, savings: { totalBalance: 10000000 }, loans: { pending: 2 } });
-        if (fn === 'getAllTransactions')     return Promise.resolve([]);
+        if (fn === 'getAllTransactions') {
+          return Promise.resolve([
+            {
+              txId: 'TX-DEP-001',
+              type: 'DEPOSIT',
+              memberId: 'MEM001',
+              amount: 500000,
+              balanceAfter: 1500000,
+              channel: 'TELLER',
+              reference: 'REF001',
+              timestamp: new Date().toISOString(),
+            },
+            {
+              txId: 'TX-WD-001',
+              type: 'WITHDRAWAL',
+              memberId: 'MEM001',
+              amount: 100000,
+              balanceAfter: 1400000,
+              channel: 'TELLER',
+              reference: 'W001',
+              timestamp: new Date().toISOString(),
+            },
+          ]);
+        }
         if (fn === 'getTransaction')        return Promise.resolve({ txId: 'TX001', type: 'DEPOSIT' });
         if (fn === 'getTransactionsByDateRange') return Promise.resolve({ transactions: [], totals: {} });
         if (fn === 'verifyMemberBalance')   return Promise.resolve({ status: 'VERIFIED', isBalanced: true });
@@ -553,6 +586,35 @@ describe('Loan Endpoints', () => {
         .set('Authorization', `Bearer ${MEMBER_TOKEN}`)
         .send({ amount: 0, reference: 'REF-001' });
       expect(res.status).toBe(422);
+    });
+  });
+});
+
+describe('Savings Endpoints', () => {
+
+  describe('GET /api/v1/savings', () => {
+    test('admin gets savings overview', async () => {
+      const res = await request(app)
+        .get('/api/v1/savings')
+        .set('Authorization', `Bearer ${ADMIN_TOKEN}`);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveProperty('stats');
+      expect(res.body.data).toHaveProperty('accounts');
+      expect(res.body.data).toHaveProperty('transactions');
+      expect(res.body.data.stats).toMatchObject({
+        totalBalance: expect.any(Number),
+        accountCount: expect.any(Number),
+        averageBalance: expect.any(Number),
+      });
+      expect(Array.isArray(res.body.data.accounts)).toBe(true);
+      expect(Array.isArray(res.body.data.transactions)).toBe(true);
+    });
+
+    test('member cannot access savings overview', async () => {
+      const res = await request(app)
+        .get('/api/v1/savings')
+        .set('Authorization', `Bearer ${MEMBER_TOKEN}`);
+      expect(res.status).toBe(403);
     });
   });
 });

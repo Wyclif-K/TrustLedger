@@ -40,6 +40,7 @@ admin-dashboard/
         ├── Dashboard.jsx                ← Stats + area chart + pie + pending loans
         ├── Members.jsx                  ← Member table, search, deposit/withdraw modals
         ├── MemberDetail.jsx             ← Profile, balance card, TX history, loans
+        ├── Savings.jsx                  ← SACCO savings balances + deposit/withdrawal txs
         ├── Loans.jsx                    ← Loan queue with approve/reject/disburse/repay
         ├── Reports.jsx                  ← Date range reports + bar chart + TX explorer
         └── Audit.jsx                    ← Balance verifier + savings history timeline
@@ -110,6 +111,12 @@ VITE_IDLE_LOGOUT_MINUTES=15
 - Deposit/Withdraw modals with reference and channel fields
 - Confirm dialog for status changes
 
+### Savings (`/savings`)
+- SACCO-wide stats: total savings, average balance, recent deposit/withdrawal counts
+- **Member balances** tab: every ledger savings account with deposited/withdrawn totals
+- **Transactions** tab: deposits and withdrawals (filterable), with channel and balance-after
+- Links to member profiles; record new deposits from **Members**
+
 ### Member Detail (`/members/:memberId`)
 - Balance card (gradient, shows deposits/withdrawals totals)
 - Member information panel
@@ -148,6 +155,7 @@ VITE_IDLE_LOGOUT_MINUTES=15
 | Feature | MEMBER | ADMIN | AUDITOR | SUPER_ADMIN |
 |---------|--------|-------|---------|-------------|
 | Dashboard | ✗ | ✓ | ✓ | ✓ |
+| Savings | ✗ | ✓ | ✓ | ✓ |
 | View Members | ✗ | ✓ | ✓ | ✓ |
 | Register Member | ✗ | ✓ | ✗ | ✓ |
 | Deposit / Withdraw | ✗ | ✓ | ✗ | ✓ |

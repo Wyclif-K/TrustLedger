@@ -15,6 +15,7 @@ const health = require('../controllers/health.controller');
 const members = require('../controllers/members.controller');
 const loans = require('../controllers/loans.controller');
 const reports = require('../controllers/reports.controller');
+const savings = require('../controllers/savings.controller');
 const notifications = require('../controllers/notifications.controller');
 const ussd = require('../controllers/ussd.controller');
 const ussdInternal = require('../controllers/ussd-internal.controller');
@@ -174,6 +175,14 @@ router.post(
 );
 router.get('/loans/:loanId/repayments', authenticate, loans.getLoanRepayments);
 router.get('/loans/:loanId/history', authenticate, loans.getLoanHistory);
+
+// ─── Savings ──────────────────────────────────────────────────────────────────
+router.get(
+  '/savings',
+  authenticate,
+  authorize('ADMIN', 'AUDITOR', 'SUPER_ADMIN'),
+  savings.getSavingsOverview
+);
 
 // ─── Reports ──────────────────────────────────────────────────────────────────
 router.get(
