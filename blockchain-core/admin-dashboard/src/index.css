@@ -15,6 +15,10 @@
   ::-webkit-scrollbar-track { @apply bg-transparent; }
   ::-webkit-scrollbar-thumb { @apply bg-navy-200 rounded-full; }
   ::-webkit-scrollbar-thumb:hover { @apply bg-navy-300; }
+  /* Mobile drawer: allow touch scroll inside fixed sidebar when body is locked */
+  #app-sidebar {
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 @layer components {
