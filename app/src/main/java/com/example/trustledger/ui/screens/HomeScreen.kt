@@ -2,7 +2,9 @@ package com.example.trustledger.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,6 +37,7 @@ import com.example.trustledger.ui.components.TlBalanceHero
 import com.example.trustledger.ui.components.TlCompactCard
 import com.example.trustledger.ui.components.TlEmptyState
 import com.example.trustledger.ui.components.TlNotificationBellButton
+import com.example.trustledger.ui.components.TlPrimaryButton
 import com.example.trustledger.ui.components.TlSectionHeader
 import com.example.trustledger.ui.components.TlTopBarTitle
 import com.example.trustledger.viewmodel.MainViewModel
@@ -44,6 +48,7 @@ fun HomeScreen(
     vm: MainViewModel,
     onOpenSettings: () -> Unit,
     onOpenNotifications: () -> Unit,
+    onOpenDeposit: () -> Unit,
 ) {
     val user = vm.user
     val balance = vm.balance
@@ -146,6 +151,18 @@ fun HomeScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                TlPrimaryButton(
+                    onClick = onOpenDeposit,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Savings, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = "Deposit to savings")
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))

@@ -40,6 +40,14 @@ data class UserDto(
     val email: String,
     val fullName: String,
     val role: String,
+    val phone: String? = null,
+)
+
+/** GET /members/:memberId — phone used for mobile-money USSD deposits. */
+data class MemberProfileDto(
+    val memberId: String? = null,
+    val fullName: String? = null,
+    val phone: String? = null,
 )
 
 data class SavingsBalance(

@@ -92,8 +92,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var notificationsBusy by mutableStateOf(false)
         private set
 
+    var depositError by mutableStateOf<String?>(null)
+        private set
+
+    var depositBusy by mutableStateOf(false)
+        private set
+
+    /** True after the user opened the USSD dialer until we detect a deposit or time out. */
+    var depositUssdPending by mutableStateOf(false)
+        private set
+
     private var liveRefreshJob: Job? = null
     private var loanActionJob: Job? = null
+    private var depositWatchJob: Job? = null
+    private var depositWatchBaselineBalance: Double? = null
+    private var depositWatchBaselineUnread: Int = 0
 
     /** False until the first successful unread count after sign-in (avoids alert spam on open). */
     private var unreadBaselineEstablished = false
@@ -203,6 +216,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun clearLocalSessionForServerChange() {
         stopLiveRefresh()
+        stopDepositWatch()
         prefs.edit()
             .remove(TrustLedgerPrefs.ACCESS)
             .remove(TrustLedgerPrefs.REFRESH)
@@ -479,6 +493,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun logoutInternal(clearSnackbar: Boolean = true) {
         stopLiveRefresh()
+        stopDepositWatch()
         prefs.edit()
             .remove(TrustLedgerPrefs.ACCESS)
             .remove(TrustLedgerPrefs.REFRESH)
@@ -635,27 +650,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun loadNotifications() {
         viewModelScope.launch {
-            val token = accessToken ?: return@launch
             notificationsBusy = true
             notificationsError = null
             try {
-                val env = api.notifications(
-                    authorization = "Bearer $token",
-                    limit = 50,
-                    unreadOnly = null,
-                    scope = "mine",
-                )
-                if (!env.success) {
-                    notificationsError = env.message ?: "Failed to load notifications"
-                    return@launch
-                }
-                notifications = env.data ?: emptyList()
+                refreshNotificationsQuiet()
             } catch (e: Exception) {
                 notificationsError = humanReadableApiError(e)
             } finally {
                 notificationsBusy = false
             }
         }
+    }
+
+    private suspend fun refreshNotificationsQuiet() {
+        val token = accessToken ?: return
+        val env = api.notifications(
+            authorization = "Bearer $token",
+            limit = 50,
+            unreadOnly = null,
+            scope = "mine",
+        )
+        if (!env.success) {
+            throw RuntimeException(env.message ?: "Failed to load notifications")
+        }
+        notifications = env.data ?: emptyList()
     }
 
     fun clearNotificationsError() {
@@ -745,6 +763,132 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 app.getString(R.string.notifications_tap_to_view),
             )
         }
+    }
+
+    fun registeredPhoneForDeposit(): String? =
+        user?.phone?.trim()?.takeIf { it.isNotEmpty() }
+
+    fun ensureMemberPhoneLoaded() {
+        if (!registeredPhoneForDeposit().isNullOrBlank()) return
+        viewModelScope.launch {
+            depositBusy = true
+            depositError = null
+            try {
+                loadMemberPhoneIfMissing()
+            } catch (e: Exception) {
+                depositError = humanReadableApiError(e)
+            } finally {
+                depositBusy = false
+            }
+        }
+    }
+
+    fun validateDepositAmount(amount: Long?): String? {
+        if (amount == null || amountDigitsBlank(amount)) {
+            return getApplication<Application>().getString(R.string.deposit_amount_required)
+        }
+        if (amount < 1_000L) {
+            return getApplication<Application>().getString(R.string.deposit_amount_min)
+        }
+        if (amount > 50_000_000L) {
+            return getApplication<Application>().getString(R.string.deposit_amount_max)
+        }
+        return null
+    }
+
+    private fun amountDigitsBlank(amount: Long): Boolean = amount <= 0L
+
+    fun onUssdDepositDialStarted(amountUgX: Long) {
+        depositWatchBaselineBalance = balance?.balance
+        depositWatchBaselineUnread = unreadNotificationCount
+        depositUssdPending = true
+        depositError = null
+        stopDepositWatch()
+        depositWatchJob = viewModelScope.launch {
+            val app = getApplication<Application>()
+            snackbarNotice = SnackbarNotice(
+                app.getString(R.string.deposit_dial_started, formatUgX(amountUgX.toDouble())),
+            )
+            tickDepositWatch()
+            repeat(35) {
+                delay(5_000)
+                if (!depositUssdPending) return@launch
+                tickDepositWatch()
+            }
+            if (depositUssdPending) {
+                depositUssdPending = false
+                snackbarNotice = SnackbarNotice(app.getString(R.string.deposit_watch_timeout))
+            }
+        }
+    }
+
+    fun onAppForegroundWhileDepositPending() {
+        if (!depositUssdPending) return
+        viewModelScope.launch { tickDepositWatch() }
+    }
+
+    fun clearDepositError() {
+        depositError = null
+    }
+
+    private suspend fun loadMemberPhoneIfMissing() {
+        if (!registeredPhoneForDeposit().isNullOrBlank()) return
+        val token = accessToken ?: return
+        val memberId = user?.memberId ?: return
+        val env = api.memberProfile("Bearer $token", memberId)
+        if (!env.success) {
+            throw RuntimeException(env.message ?: "Failed to load profile")
+        }
+        val phone = env.data?.phone?.trim()?.takeIf { it.isNotEmpty() }
+        if (phone != null && user != null) {
+            user = user?.copy(phone = phone)
+        }
+    }
+
+    private suspend fun tickDepositWatch() {
+        val app = getApplication<Application>()
+        val beforeBalance = depositWatchBaselineBalance
+        val beforeUnread = depositWatchBaselineUnread
+        loadBalance()
+        loadTransactions()
+        fetchUnreadNotificationCount(alertIfIncreased = true)
+        refreshNotificationsQuiet()
+        val afterBalance = balance?.balance
+        if (beforeBalance != null && afterBalance != null && afterBalance > beforeBalance) {
+            val delta = afterBalance - beforeBalance
+            snackbarNotice = SnackbarNotice(
+                app.getString(
+                    R.string.deposit_confirmed_balance,
+                    formatUgX(delta),
+                    formatUgX(afterBalance),
+                ),
+                successAccent = true,
+            )
+            finishDepositWatch()
+            return
+        }
+        val depositNotice = notifications.firstOrNull {
+            it.type.equals("DEPOSIT", ignoreCase = true) &&
+                (unreadNotificationCount > beforeUnread || !it.isRead)
+        }
+        if (depositNotice != null) {
+            val title = depositNotice.title?.takeIf { !it.isNullOrBlank() }
+                ?: app.getString(R.string.deposit_notification_title)
+            val body = depositNotice.message?.takeIf { !it.isNullOrBlank() }
+                ?: app.getString(R.string.deposit_notification_body)
+            snackbarNotice = SnackbarNotice("$title — $body", successAccent = true)
+            finishDepositWatch()
+        }
+    }
+
+    private fun finishDepositWatch() {
+        depositUssdPending = false
+        stopDepositWatch()
+    }
+
+    private fun stopDepositWatch() {
+        depositWatchJob?.cancel()
+        depositWatchJob = null
     }
 
     fun formatUgX(value: Double?): String {

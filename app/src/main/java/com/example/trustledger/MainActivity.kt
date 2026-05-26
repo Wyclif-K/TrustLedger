@@ -45,11 +45,20 @@ class MainActivity : FragmentActivity() {
 
     private enum class UnauthScreen { LOGIN, SETTINGS }
 
+    private lateinit var vm: MainViewModel
+
+    override fun onResume() {
+        super.onResume()
+        if (::vm.isInitialized) {
+            vm.onAppForegroundWhileDepositPending()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        val vm = ViewModelProvider(this)[MainViewModel::class.java]
+        vm = ViewModelProvider(this)[MainViewModel::class.java]
 
         setContent {
             val systemDark = isSystemInDarkTheme()

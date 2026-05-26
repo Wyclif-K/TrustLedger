@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.trustledger.ui.screens.DepositScreen
 import com.example.trustledger.ui.screens.HomeScreen
 import com.example.trustledger.ui.screens.LoansScreen
 import com.example.trustledger.ui.screens.NotificationsScreen
@@ -24,6 +25,7 @@ object NavGraph {
     const val PROFILE = "profile"
     const val SETTINGS = "settings"
     const val NOTIFICATIONS = "notifications"
+    const val DEPOSIT = "deposit"
 
     const val START_DESTINATION = HOME
 
@@ -47,6 +49,7 @@ fun TrustLedgerNavHost(
                 vm = vm,
                 onOpenSettings = { navController.navigate(NavGraph.SETTINGS) },
                 onOpenNotifications = { navController.navigate(NavGraph.NOTIFICATIONS) },
+                onOpenDeposit = { navController.navigate(NavGraph.DEPOSIT) },
             )
         }
         composable(NavGraph.LOANS) {
@@ -71,6 +74,12 @@ fun TrustLedgerNavHost(
         }
         composable(NavGraph.NOTIFICATIONS) {
             NotificationsScreen(
+                vm = vm,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(NavGraph.DEPOSIT) {
+            DepositScreen(
                 vm = vm,
                 onBack = { navController.popBackStack() },
             )

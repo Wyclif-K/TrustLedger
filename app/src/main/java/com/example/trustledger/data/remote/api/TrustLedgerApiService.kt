@@ -6,6 +6,7 @@ import com.example.trustledger.data.ChangePasswordRequest
 import com.example.trustledger.data.LoanApplicationRequest
 import com.example.trustledger.data.LoanDto
 import com.example.trustledger.data.LoanRepaymentRequest
+import com.example.trustledger.data.MemberProfileDto
 import com.example.trustledger.data.LoginData
 import com.example.trustledger.data.LoginRequest
 import com.example.trustledger.data.LogoutRequest
@@ -41,6 +42,12 @@ interface TrustLedgerApiService {
 
     @GET("auth/me")
     suspend fun me(@Header("Authorization") authorization: String): ApiEnvelope<UserDto>
+
+    @GET("members/{memberId}")
+    suspend fun memberProfile(
+        @Header("Authorization") authorization: String,
+        @Path("memberId") memberId: String,
+    ): ApiEnvelope<MemberProfileDto>
 
     @GET("members/{memberId}/balance")
     suspend fun balance(
