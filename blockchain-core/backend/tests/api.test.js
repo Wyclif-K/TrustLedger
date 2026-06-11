@@ -182,6 +182,18 @@ jest.mock('../services/db.service', () => {
       findMany:   jest.fn().mockResolvedValue([]),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
+    memberRequest: {
+      create: jest.fn().mockImplementation(({ data }) => Promise.resolve({
+        id: 'req-001',
+        status: 'PENDING',
+        createdAt: new Date('2024-06-10T08:00:00.000Z'),
+        updatedAt: new Date('2024-06-10T08:00:00.000Z'),
+        ...data,
+      })),
+      findMany:   jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn().mockResolvedValue(null),
+      update:     jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'req-001', ...data })),
+    },
   };
 });
 
@@ -381,6 +393,48 @@ describe('Member Endpoints', () => {
         .get('/api/v1/members/MEM001/balance')
         .set('Authorization', `Bearer ${ADMIN_TOKEN}`);
       expect(res.status).toBe(200);
+    });
+  });
+
+  describe('POST /api/v1/members/:memberId/savings-request', () => {
+    test('member can submit savings deposit for admin approval', async () => {
+      const res = await request(app)
+        .post('/api/v1/members/MEM001/savings-request')
+        .set('Authorization', `Bearer ${MEMBER_TOKEN}`)
+        .send({ amount: 25555, channel: 'MOBILE_APP' });
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toMatchObject({
+        memberId: 'MEM001',
+        type: 'SAVINGS_DEPOSIT',
+        amount: 25555,
+        channel: 'MOBILE_APP',
+        status: 'PENDING',
+      });
+      expect(res.body.data.reference).toMatch(/^SAV-MOBILE_APP-/);
+    });
+
+    test('member cannot submit savings for another member', async () => {
+      const res = await request(app)
+        .post('/api/v1/members/MEM002/savings-request')
+        .set('Authorization', `Bearer ${MEMBER_TOKEN}`)
+        .send({ amount: 5000 });
+      expect(res.status).toBe(403);
+    });
+
+    test('rejects amount below minimum', async () => {
+      const res = await request(app)
+        .post('/api/v1/members/MEM001/savings-request')
+        .set('Authorization', `Bearer ${MEMBER_TOKEN}`)
+        .send({ amount: 500 });
+      expect(res.status).toBe(422);
+    });
+
+    test('rejects unauthenticated request', async () => {
+      const res = await request(app)
+        .post('/api/v1/members/MEM001/savings-request')
+        .send({ amount: 25555 });
+      expect(res.status).toBe(401);
     });
   });
 

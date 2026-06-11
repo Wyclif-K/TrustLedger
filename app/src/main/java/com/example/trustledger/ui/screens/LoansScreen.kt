@@ -389,7 +389,7 @@ fun LoansScreen(
                         },
                         label = "Amount",
                         enabled = !formBusy && disbursedLoan != null,
-                        supportingText = if (disbursedLoan == null) null else "Pay toward your active loan",
+                        supportingText = if (disbursedLoan == null) null else "Submitted for admin approval before blockchain",
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Spacer(modifier = Modifier.height(16.dp))

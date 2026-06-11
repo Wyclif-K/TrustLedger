@@ -47,13 +47,6 @@ class MainActivity : FragmentActivity() {
 
     private lateinit var vm: MainViewModel
 
-    override fun onResume() {
-        super.onResume()
-        if (::vm.isInitialized) {
-            vm.onAppForegroundWhileDepositPending()
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)

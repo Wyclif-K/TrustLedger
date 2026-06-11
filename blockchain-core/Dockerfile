@@ -18,6 +18,8 @@ ENV SERVE_ADMIN_STATIC=true
 # Same-process USSD bridge mounted at /ussd-bridge (override with USSD_BRIDGE_EMBED=false to disable)
 ENV USSD_BRIDGE_EMBED=true
 ENV USSD_BRIDGE_MOUNT_PATH=/ussd-bridge
+# Embedded bridge calls the API in the same container (override BACKEND_API_KEY on Railway)
+ENV BACKEND_API_URL=http://127.0.0.1:3000/api/v1
 # Log to stdout only in containers unless user sets ENABLE_ROTATE_FILE_LOG=true
 ENV ENABLE_ROTATE_FILE_LOG=false
 # Prisma generate does not need a live DB, only a syntactically valid URL.

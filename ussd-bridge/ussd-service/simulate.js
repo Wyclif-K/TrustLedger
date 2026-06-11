@@ -22,9 +22,12 @@ const args = Object.fromEntries(
     .map(a => a.slice(2).split('='))
 );
 
-const BASE_URL  = args.url   || 'http://localhost:4000';
+require('dotenv').config();
+
+const config    = require('./config');
+const BASE_URL  = args.url   || `http://localhost:${config.port}`;
 const PHONE     = args.phone || '+256700123456';
-const SHORTCODE = '*234#';
+const SHORTCODE = config.africastalking.shortcode || '*384*13948#';
 
 const SESSION_ID = `sim-${Date.now()}`;
 let inputHistory = [];

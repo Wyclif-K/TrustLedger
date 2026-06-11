@@ -19,6 +19,7 @@ const savings = require('../controllers/savings.controller');
 const notifications = require('../controllers/notifications.controller');
 const ussd = require('../controllers/ussd.controller');
 const ussdInternal = require('../controllers/ussd-internal.controller');
+const memberRequests = require('../controllers/member-requests.controller');
 const { requireUssdServiceKey } = require('../middleware/ussd-service.middleware');
 
 // ─── Health ───────────────────────────────────────────────────────────────────
@@ -60,10 +61,18 @@ router.post(
 router.post(
   '/internal/ussd/loans/:loanId/repay',
   requireUssdServiceKey,
-  loans.repayValidators,
+  memberRequests.ussdRepayValidators,
   validate,
   auditLogger,
-  loans.repayLoan
+  memberRequests.ussdSubmitRepaymentRequest
+);
+router.post(
+  '/internal/ussd/savings-request',
+  requireUssdServiceKey,
+  memberRequests.ussdSavingsValidators,
+  validate,
+  auditLogger,
+  memberRequests.ussdSubmitSavingsRequest
 );
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -101,6 +110,14 @@ router.post(
   validate,
   auditLogger,
   members.deposit
+);
+router.post(
+  '/members/:memberId/savings-request',
+  authenticate,
+  memberRequests.savingsRequestValidators,
+  validate,
+  auditLogger,
+  memberRequests.submitSavingsRequest
 );
 router.post(
   '/members/:memberId/withdraw',
@@ -168,10 +185,19 @@ router.post(
 router.post(
   '/loans/:loanId/repay',
   authenticate,
+  authorize('ADMIN', 'SUPER_ADMIN'),
   loans.repayValidators,
   validate,
   auditLogger,
   loans.repayLoan
+);
+router.post(
+  '/loans/:loanId/repay-request',
+  authenticate,
+  memberRequests.repaymentRequestValidators,
+  validate,
+  auditLogger,
+  memberRequests.submitRepaymentRequest
 );
 router.get('/loans/:loanId/repayments', authenticate, loans.getLoanRepayments);
 router.get('/loans/:loanId/history', authenticate, loans.getLoanHistory);
@@ -182,6 +208,32 @@ router.get(
   authenticate,
   authorize('ADMIN', 'AUDITOR', 'SUPER_ADMIN'),
   savings.getSavingsOverview
+);
+
+// ─── Member requests (admin approval queue) ───────────────────────────────────
+router.get(
+  '/member-requests',
+  authenticate,
+  authorize('ADMIN', 'SUPER_ADMIN'),
+  memberRequests.listValidators,
+  validate,
+  memberRequests.listRequests
+);
+router.post(
+  '/member-requests/:id/approve',
+  authenticate,
+  authorize('ADMIN', 'SUPER_ADMIN'),
+  auditLogger,
+  memberRequests.approveRequest
+);
+router.post(
+  '/member-requests/:id/reject',
+  authenticate,
+  authorize('ADMIN', 'SUPER_ADMIN'),
+  memberRequests.rejectValidators,
+  validate,
+  auditLogger,
+  memberRequests.rejectRequest
 );
 
 // ─── Reports ──────────────────────────────────────────────────────────────────

@@ -30,6 +30,8 @@ const { startLoanApplication,
         handleLoanApplication }  = require('./loanapply.handler');
 const { startRepayment,
         handleRepayment }        = require('./repayment.handler');
+const { startSavingsDeposit,
+        handleSavingsDeposit }   = require('./savings.handler');
 
 /**
  * Parse the cumulative text input from Africa's Talking.
@@ -80,6 +82,8 @@ async function routeUssdRequest({ sessionId, phoneNumber, text }) {
         return handleLoanApplication(sessionId, sess, lastInput, phoneNumber);
       case 'REPAYMENT':
         return handleRepayment(sessionId, sess, lastInput, phoneNumber);
+      case 'SAVINGS_DEPOSIT':
+        return handleSavingsDeposit(sessionId, sess, lastInput, phoneNumber);
       default:
         await sessionStore.deleteSession(sessionId);
         return MENUS.MAIN;
@@ -96,6 +100,7 @@ async function routeUssdRequest({ sessionId, phoneNumber, text }) {
       case '3': return handleLoanStatus(sess);
       case '4': return startLoanApplication(sessionId, sess);
       case '5': return startRepayment(sessionId, sess);
+      case '6': return startSavingsDeposit(sessionId, sess);
       case '0': return MENUS.EXIT;
       default:  return MENUS.INVALID_OPTION;
     }
@@ -114,6 +119,10 @@ async function resolveMember(phone, sessionId) {
     const member = await backend.getMemberByPhone(phone);
     if (!member) {
       logger.warn(`Unregistered phone: ${phone}`);
+      return null;
+    }
+    if (member.status && member.status !== 'ACTIVE') {
+      logger.warn(`Inactive member phone: ${phone} status=${member.status}`);
       return null;
     }
     await sessionStore.setSession(sessionId, {

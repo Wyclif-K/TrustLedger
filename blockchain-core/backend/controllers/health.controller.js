@@ -150,7 +150,13 @@ async function health(req, res) {
   }
 
   if (config.fabric.enabled) {
-    body.fabric = fabricService.isConnected() ? 'up' : 'down';
+    const probe = await fabricService.probePeerReachable();
+    body.fabricPeer = probe.peerEndpoint;
+    body.fabricPeerAlias = probe.peerHostAlias;
+    body.fabric = probe.reachable ? 'up' : 'down';
+    if (!probe.reachable && probe.detail) {
+      body.fabricDetail = probe.detail;
+    }
   }
 
   const httpStatus = body.database === 'up' ? 200 : 503;

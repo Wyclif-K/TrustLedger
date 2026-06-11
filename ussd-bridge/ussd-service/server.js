@@ -12,8 +12,24 @@ const smsService   = require('./services/sms.service');
 
 let server;
 
+function logStartupConfigWarnings() {
+  if (!config.backend.apiKey) {
+    logger.warn(
+      'BACKEND_API_KEY is empty — bridge cannot call /internal/ussd/* on the API. ' +
+        'Set the same value as USSD_SERVICE_KEY in blockchain-core/backend/.env'
+    );
+  }
+  if (!config.africastalking.apiKey) {
+    logger.warn('AT_API_KEY is empty — SMS confirmations disabled (USSD menus still work).');
+  }
+  logger.info(`Backend API: ${config.backend.apiUrl}`);
+  logger.info(`AT shortcode (configure in Africa\'s Talking dashboard): ${config.africastalking.shortcode}`);
+}
+
 async function start() {
   try {
+    logStartupConfigWarnings();
+
     // ── 1. Connect to Redis (session store) ─────────────────────────────────
     if (config.redis.enabled) {
       logger.info('Connecting to Redis...');

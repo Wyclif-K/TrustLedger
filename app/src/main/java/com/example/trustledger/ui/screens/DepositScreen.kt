@@ -18,6 +18,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -61,7 +62,7 @@ fun DepositScreen(
     val ussdCode = stringResource(R.string.deposit_ussd_shortcode)
     val amountLong = amountDigits.toLongOrNull()
     val amountError = amountLong != null && (amountLong < 1_000L || amountLong > 50_000_000L)
-    val canSubmit = phone != null && amountDigits.isNotBlank() && !amountError && !vm.depositBusy
+    val canSubmit = amountDigits.isNotBlank() && !amountError && !vm.depositBusy
 
     LaunchedEffect(Unit) {
         vm.ensureMemberPhoneLoaded()
@@ -137,7 +138,7 @@ fun DepositScreen(
                     shape = FieldShape,
                     colors = fieldColors,
                     supportingText = {
-                        Text(stringResource(R.string.deposit_phone_hint))
+                        Text(stringResource(R.string.deposit_phone_hint, ussdCode))
                     },
                 )
             }
@@ -170,15 +171,6 @@ fun DepositScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (vm.depositUssdPending) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = stringResource(R.string.deposit_waiting_confirmation),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
             }
 
             TlPrimaryButton(
@@ -189,25 +181,28 @@ fun DepositScreen(
                         localError = validation
                         return@TlPrimaryButton
                     }
-                    if (phone == null) {
-                        localError = context.getString(R.string.deposit_phone_missing)
-                        return@TlPrimaryButton
-                    }
-                    val opened = UssdDialHelper.openDialer(context, ussdCode)
-                    if (!opened) {
-                        localError = context.getString(R.string.deposit_dial_failed)
-                        return@TlPrimaryButton
-                    }
-                    vm.onUssdDepositDialStarted(amountLong!!)
+                    vm.submitSavingsRequest(amountLong!!.toDouble())
                 },
                 enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = stringResource(R.string.deposit_continue_button, ussdCode),
+                    text = stringResource(R.string.deposit_continue_button),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
+            }
+
+            OutlinedButton(
+                onClick = {
+                    val opened = UssdDialHelper.openDialer(context, ussdCode)
+                    if (!opened) {
+                        localError = context.getString(R.string.deposit_dial_failed)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.deposit_open_ussd_button, ussdCode))
             }
 
             Spacer(modifier = Modifier.height(24.dp))

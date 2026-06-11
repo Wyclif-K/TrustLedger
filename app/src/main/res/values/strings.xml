@@ -40,26 +40,23 @@
     <string name="settings_about_version_label">App version</string>
     <string name="deposit_ussd_shortcode" translatable="false">*384*13948#</string>
     <string name="deposit_title">Deposit savings</string>
-    <string name="deposit_subtitle">Mobile money via USSD</string>
+    <string name="deposit_subtitle">Submit for admin approval</string>
     <string name="deposit_phone_section">Registered number</string>
-    <string name="deposit_phone_label">Mobile money number</string>
-    <string name="deposit_phone_hint">Deposits must be made from this number registered with your SACCO.</string>
+    <string name="deposit_phone_label">Registered phone</string>
+    <string name="deposit_phone_hint">Your SACCO account phone. You can also dial %1$s from this line to submit savings via USSD.</string>
     <string name="deposit_phone_loading">Loading…</string>
-    <string name="deposit_phone_missing">No phone number on your account. Ask your SACCO admin to add your mobile money number.</string>
+    <string name="deposit_phone_missing">No phone number on your account. Ask your SACCO admin to add your phone number.</string>
     <string name="deposit_amount_section">Amount</string>
-    <string name="deposit_amount_label">Deposit amount</string>
-    <string name="deposit_amount_hint">You will confirm the amount again on the USSD menu after dialing.</string>
+    <string name="deposit_amount_label">Savings amount</string>
+    <string name="deposit_amount_hint">Enter the amount you wish to save. An administrator will verify and approve before it is recorded on the blockchain.</string>
     <string name="deposit_amount_error">Enter an amount between UGX 1,000 and UGX 50,000,000.</string>
     <string name="deposit_amount_required">Enter a deposit amount.</string>
     <string name="deposit_amount_min">Minimum deposit is UGX 1,000.</string>
     <string name="deposit_amount_max">Maximum deposit is UGX 50,000,000.</string>
-    <string name="deposit_ussd_steps">Tap Continue to dial %1$s. Complete the payment with your mobile money PIN on the same registered line. Your balance and notifications update when the SACCO records the deposit.</string>
-    <string name="deposit_continue_button">Continue to %1$s</string>
+    <string name="deposit_ussd_steps">Or dial %1$s from your registered line and choose option 6 (Make Savings) to submit the same request via USSD. No mobile money payment is required.</string>
+    <string name="deposit_continue_button">Submit savings request</string>
+    <string name="deposit_open_ussd_button">Dial %1$s (USSD)</string>
     <string name="deposit_dial_failed">Could not open the phone dialer. Check that a dialer app is installed.</string>
-    <string name="deposit_dial_started">Complete the payment on %1$s. We will refresh your balance when the deposit is recorded.</string>
-    <string name="deposit_waiting_confirmation">Waiting for your deposit to be recorded…</string>
-    <string name="deposit_watch_timeout">No deposit detected yet. If you completed payment, your balance may update shortly—pull to refresh on Home.</string>
-    <string name="deposit_confirmed_balance">Deposit received: %1$s. New balance: %2$s.</string>
-    <string name="deposit_notification_title">Deposit received</string>
-    <string name="deposit_notification_body">Your savings balance has been updated.</string>
+    <string name="deposit_submitted">Savings request submitted. Ref: %1$s. An administrator will approve it before your balance updates.</string>
+    <string name="deposit_submit_failed">Could not submit savings request. Try again or use USSD.</string>
 </resources>

@@ -18,12 +18,16 @@
 const fabricService = require('../services/fabric.service');
 const prisma        = require('../services/db.service');
 const logger        = require('../config/logger');
+const {
+  createSavingsDepositRequest,
+  createLoanRepaymentRequest,
+} = require('./member-requests.controller');
 
 // Session store (in-memory — use Redis in production)
 const sessions = new Map();
 
 const MENU = {
-  MAIN: `CON Welcome to TrustLedger SACCO\n1. Check Balance\n2. Mini Statement\n3. Loan Status\n4. Apply for Loan\n5. Make Repayment\n0. Exit`,
+  MAIN: `CON Welcome to TrustLedger SACCO\n1. Check Balance\n2. Mini Statement\n3. Loan Status\n4. Apply for Loan\n5. Make Repayment\n6. Make Savings\n0. Exit`,
   EXIT: `END Thank you for using TrustLedger SACCO.`,
   ERR:  `END An error occurred. Please try again or visit the branch.`,
 };
@@ -48,7 +52,12 @@ async function handleUssd(req, res) {
   try {
     // ── Level 0: First dial (no input yet) ──────────────────────────────────
     if (!text || text === '') {
-      response = MENU.MAIN;
+      const memberId = await getMemberIdByPhone(phoneNumber);
+      if (!memberId) {
+        response = `END Your phone number is not registered. Visit the branch.`;
+      } else {
+        response = MENU.MAIN;
+      }
 
     // ── Level 1: Main menu choice ────────────────────────────────────────────
     } else if (level === 1) {
@@ -105,6 +114,12 @@ async function handleUssd(req, res) {
         case '5':
           sessions.set(sessionId, { flow: 'REPAYMENT', step: 'amount', phone: phoneNumber });
           response = `CON Enter repayment amount (UGX):`;
+          break;
+
+        // 6. Make Savings - ask for amount
+        case '6':
+          sessions.set(sessionId, { flow: 'SAVINGS_DEPOSIT', step: 'amount', phone: phoneNumber });
+          response = `CON Enter savings amount (UGX):\n(Min: 1,000 Max: 50,000,000)`;
           break;
 
         // 0. Exit
@@ -181,7 +196,7 @@ async function handleFlow(session, inputs, sessionId, phoneNumber) {
         const result = await fabricService.LoansContract.submit(
           'applyForLoan', memberId, String(amount), String(termMonths), purpose
         );
-        return `END Loan application submitted!\nRef: ${result.loanId}\nAwait admin approval.`;
+        return `END Loan application submitted!\nRef: ${result.loanId}\nAdmin will review\nbefore blockchain.`;
       } catch (err) {
         logger.error('USSD loan apply failed:', err.message);
         return `END Failed: ${err.message.substring(0, 80)}`;
@@ -211,18 +226,51 @@ async function handleFlow(session, inputs, sessionId, phoneNumber) {
       if (lastInput !== '1') return `END Repayment cancelled.`;
 
       const { amount, loanId } = session;
-      const ref = `USSD-${Date.now()}`;
+      const memberId = await getMemberIdByPhone(phoneNumber);
+      if (!memberId) return `END Phone not registered.`;
+
+      const ref = `USSD-REPAY-${Date.now()}`;
 
       try {
-        const result = await fabricService.LoansContract.submit(
-          'repayLoan', loanId, String(amount), ref, 'USSD'
-        );
-        const msg = result.isFullyRepaid
-          ? `Loan fully repaid! Congratulations.`
-          : `Outstanding: UGX ${result.outstanding.toLocaleString()}`;
-        return `END Repayment confirmed!\nRef: ${ref}\n${msg}`;
+        const result = await createLoanRepaymentRequest(memberId, loanId, amount, 'USSD', ref);
+        if (!result.ok) return `END ${result.message}`;
+        return `END Repayment request submitted!\nRef: ${ref}\nAwait admin approval.`;
       } catch (err) {
-        logger.error('USSD repay failed:', err.message);
+        logger.error('USSD repay request failed:', err.message);
+        return `END Failed: ${err.message.substring(0, 80)}`;
+      }
+    }
+  }
+
+  // ── Savings Deposit Flow ───────────────────────────────────────────────────
+  if (session.flow === 'SAVINGS_DEPOSIT') {
+    if (session.step === 'amount') {
+      const amount = parseInt(lastInput);
+      if (isNaN(amount) || amount < 1000) {
+        return `CON Invalid amount. Min UGX 1,000.\nEnter amount:`;
+      }
+      if (amount > 50000000) {
+        return `CON Amount too high. Max UGX 50,000,000.\nEnter amount:`;
+      }
+      sessions.set(sessionId, { ...session, step: 'confirm', amount });
+      return `CON Confirm Savings:\nAmount: UGX ${amount.toLocaleString()}\n\nNo mobile money.\nAdmin will approve.\n\n1. Submit\n2. Cancel`;
+    }
+
+    if (session.step === 'confirm') {
+      sessions.delete(sessionId);
+      if (lastInput !== '1') return `END Savings deposit cancelled.`;
+
+      const { amount } = session;
+      const memberId = await getMemberIdByPhone(phoneNumber);
+      if (!memberId) return `END Phone not registered.`;
+
+      const ref = `USSD-SAV-${Date.now()}`;
+      try {
+        const result = await createSavingsDepositRequest(memberId, amount, 'USSD', ref);
+        if (!result.ok) return `END ${result.message}`;
+        return `END Savings request submitted!\nRef: ${ref}\nAwait admin approval.`;
+      } catch (err) {
+        logger.error('USSD savings request failed:', err.message);
         return `END Failed: ${err.message.substring(0, 80)}`;
       }
     }
@@ -259,9 +307,10 @@ async function getMemberIdByPhone(phone) {
   try {
     const user = await prisma.user.findFirst({
       where:  { phone: { in: variants } },
-      select: { memberId: true },
+      select: { memberId: true, status: true },
     });
-    return user?.memberId || null;
+    if (!user || user.status !== 'ACTIVE') return null;
+    return user.memberId;
   } catch {
     return null;
   }

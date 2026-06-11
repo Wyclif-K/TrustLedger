@@ -6,6 +6,8 @@ import com.example.trustledger.data.ChangePasswordRequest
 import com.example.trustledger.data.LoanApplicationRequest
 import com.example.trustledger.data.LoanDto
 import com.example.trustledger.data.LoanRepaymentRequest
+import com.example.trustledger.data.MemberRequestDto
+import com.example.trustledger.data.SavingsDepositRequest
 import com.example.trustledger.data.MemberProfileDto
 import com.example.trustledger.data.LoginData
 import com.example.trustledger.data.LoginRequest
@@ -79,12 +81,19 @@ interface TrustLedgerApiService {
         @Body body: LoanApplicationRequest,
     ): ApiEnvelope<LoanDto>
 
-    @POST("loans/{loanId}/repay")
-    suspend fun repayLoan(
+    @POST("loans/{loanId}/repay-request")
+    suspend fun submitRepaymentRequest(
         @Header("Authorization") authorization: String,
         @Path("loanId") loanId: String,
         @Body body: LoanRepaymentRequest,
-    ): ApiEnvelope<Any>
+    ): ApiEnvelope<MemberRequestDto>
+
+    @POST("members/{memberId}/savings-request")
+    suspend fun submitSavingsRequest(
+        @Header("Authorization") authorization: String,
+        @Path("memberId") memberId: String,
+        @Body body: SavingsDepositRequest,
+    ): ApiEnvelope<MemberRequestDto>
 
     @GET("notifications/unread-count")
     suspend fun unreadNotificationCount(

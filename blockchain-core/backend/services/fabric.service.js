@@ -272,10 +272,34 @@ function isConnected() {
   return !!gateway;
 }
 
+/**
+ * Live gRPC probe — confirms the configured peer answers a chaincode evaluate.
+ * "No record found" from chaincode still counts as reachable.
+ */
+async function probePeerReachable() {
+  if (!config.fabric.enabled) {
+    return { reachable: false, peerEndpoint: null, peerHostAlias: null, detail: 'disabled' };
+  }
+  const peerEndpoint = config.fabric.peerEndpoint;
+  const peerHostAlias = config.fabric.peerHostAlias;
+  try {
+    await connect_();
+    await SavingsContract.evaluate('getMember', '__health_probe__');
+    return { reachable: true, peerEndpoint, peerHostAlias, detail: 'ok' };
+  } catch (err) {
+    const msg = String(err.message || err);
+    if (/No record found|not found for key/i.test(msg)) {
+      return { reachable: true, peerEndpoint, peerHostAlias, detail: 'ok (peer responded)' };
+    }
+    return { reachable: false, peerEndpoint, peerHostAlias, detail: msg };
+  }
+}
+
 module.exports = {
   connect: connect_,
   disconnect,
   isConnected,
+  probePeerReachable,
   submitTransaction,
   evaluateTransaction,
   SavingsContract,

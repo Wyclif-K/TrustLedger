@@ -91,10 +91,18 @@ async function applyForLoan(memberId, amount, termMonths, purpose) {
   return unwrap(res);
 }
 
-// ── Record loan repayment ─────────────────────────────────────────────────────
-async function repayLoan(loanId, amount, reference) {
+// ── Submit loan repayment request (admin approves before blockchain) ──────────
+async function submitRepaymentRequest(memberId, loanId, amount, reference) {
   const res = await api.post(`/internal/ussd/loans/${loanId}/repay`, {
-    amount, reference, channel: 'USSD',
+    memberId, amount, reference,
+  });
+  return unwrap(res);
+}
+
+// ── Submit savings deposit request (admin approves before blockchain) ─────────
+async function submitSavingsRequest(memberId, amount, reference) {
+  const res = await api.post('/internal/ussd/savings-request', {
+    memberId, amount, reference,
   });
   return unwrap(res);
 }
@@ -123,7 +131,8 @@ module.exports = {
   getActiveLoan,
   getDisbursedLoan,
   applyForLoan,
-  repayLoan,
+  submitRepaymentRequest,
+  submitSavingsRequest,
   getLoanPolicy,
   checkBackendHealth,
 };

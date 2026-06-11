@@ -46,7 +46,8 @@ jest.mock('./services/backend.service', () => ({
     monthlyInstalment: 91000, nextDueDate: '2024-04-01T00:00:00Z',
   }),
   applyForLoan:       jest.fn().mockResolvedValue({ loanId: 'LOAN-MEM001-NEW-XYZ', status: 'PENDING' }),
-  repayLoan:          jest.fn().mockResolvedValue({ amountPaid: 91000, outstanding: 729000, isFullyRepaid: false }),
+  submitRepaymentRequest: jest.fn().mockResolvedValue({ reference: 'USSD-REPAY-123', amount: 91000, status: 'PENDING' }),
+  submitSavingsRequest:   jest.fn().mockResolvedValue({ reference: 'USSD-SAV-123', amount: 50000, status: 'PENDING' }),
   getLoanPolicy:      jest.fn().mockResolvedValue({ INTEREST_RATE_MONTHLY: 0.015, PROCESSING_FEE_RATE: 0.01 }),
   checkBackendHealth: jest.fn().mockResolvedValue({ ok: true }),
 }));
@@ -108,6 +109,7 @@ describe('Main Menu (first dial)', () => {
     expect(res.text).toContain('1. Check Balance');
     expect(res.text).toContain('4. Apply for Loan');
     expect(res.text).toContain('5. Make Repayment');
+    expect(res.text).toContain('6. Make Savings');
   });
 
   test('response is plain text not JSON', async () => {
@@ -294,7 +296,7 @@ describe('Option 5 — Loan Repayment', () => {
     expect(res.text).toMatch(/Confirm|1\. Confirm/i);
   });
 
-  test('confirmation submits repayment and returns success', async () => {
+  test('confirmation submits repayment request for admin approval', async () => {
     sessionData.set(SID, {
       memberId: 'MEM001', phone: '+256700123456',
       flow: 'REPAYMENT', step: 'confirm',
@@ -302,7 +304,7 @@ describe('Option 5 — Loan Repayment', () => {
     });
     const res = await ussd({ sessionId: SID, text: '5*91000*1' });
     expect(res.text).toContain('END');
-    expect(res.text).toMatch(/confirmed|payment/i);
+    expect(res.text).toMatch(/submitted|approval/i);
   });
 
   test('no disbursed loan shows helpful message', async () => {
@@ -311,6 +313,41 @@ describe('Option 5 — Loan Repayment', () => {
     const res = await ussd({ sessionId: SID, text: '5' });
     expect(res.text).toContain('END');
     expect(res.text).toMatch(/No active loan|repayment/i);
+  });
+});
+
+// =============================================================================
+// Savings Deposit Flow (Option 6)
+// =============================================================================
+describe('Option 6 — Savings Deposit', () => {
+  const SID = 'sess-sav-001';
+  beforeEach(() => seedSession(SID));
+
+  test('starts with amount prompt', async () => {
+    const res = await ussd({ sessionId: SID, text: '6' });
+    expect(res.text).toContain('CON');
+    expect(res.text).toMatch(/amount|UGX/i);
+  });
+
+  test('valid amount shows confirm screen', async () => {
+    sessionData.set(SID, {
+      memberId: 'MEM001', phone: '+256700123456',
+      flow: 'SAVINGS_DEPOSIT', step: 'amount', data: {},
+    });
+    const res = await ussd({ sessionId: SID, text: '6*50000' });
+    expect(res.text).toContain('CON');
+    expect(res.text).toMatch(/Confirm|Submit/i);
+  });
+
+  test('confirmation submits savings request', async () => {
+    sessionData.set(SID, {
+      memberId: 'MEM001', phone: '+256700123456',
+      flow: 'SAVINGS_DEPOSIT', step: 'confirm',
+      data: { amount: 50000 },
+    });
+    const res = await ussd({ sessionId: SID, text: '6*50000*1' });
+    expect(res.text).toContain('END');
+    expect(res.text).toMatch(/submitted|approval/i);
   });
 });
 

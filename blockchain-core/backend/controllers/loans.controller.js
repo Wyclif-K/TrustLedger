@@ -50,10 +50,10 @@ async function applyForLoan(req, res, next) {
     // Send notification
     await createInAppNotification(memberId, 'GENERAL',
       'Loan Application Submitted',
-      `Your loan application for UGX ${Number(amount).toLocaleString()} has been submitted and is pending review.`
+      `Your loan application for UGX ${Number(amount).toLocaleString()} has been submitted. An administrator will review it before it is recorded on the blockchain.`
     );
 
-    return sendSuccess(res, result, 'Loan application submitted successfully.', 201);
+    return sendSuccess(res, result, 'Loan application submitted. Awaiting admin approval.', 201);
   } catch (err) {
     next(err);
   }

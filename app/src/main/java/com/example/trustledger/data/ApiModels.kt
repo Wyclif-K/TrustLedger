@@ -43,7 +43,7 @@ data class UserDto(
     val phone: String? = null,
 )
 
-/** GET /members/:memberId — phone used for mobile-money USSD deposits. */
+/** GET /members/:memberId — registered phone for USSD access. */
 data class MemberProfileDto(
     val memberId: String? = null,
     val fullName: String? = null,
@@ -69,6 +69,21 @@ data class LoanRepaymentRequest(
     val amount: Double,
     val reference: String,
     val channel: String = "MOBILE_APP",
+)
+
+data class SavingsDepositRequest(
+    val amount: Double,
+    val channel: String = "MOBILE_APP",
+)
+
+data class MemberRequestDto(
+    val id: String? = null,
+    val memberId: String? = null,
+    val type: String? = null,
+    val status: String? = null,
+    val amount: Double? = null,
+    val reference: String? = null,
+    val channel: String? = null,
 )
 
 data class LoanDto(

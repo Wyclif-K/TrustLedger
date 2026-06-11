@@ -2,7 +2,7 @@ import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Users, CreditCard, BarChart3, LogOut, ShieldCheck, Landmark, ChevronRight, Radio, X,
-  PiggyBank,
+  PiggyBank, ClipboardList,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuthStore } from '@/store/auth.store'
@@ -11,8 +11,9 @@ import { authApi } from '@/services/api'
 const navItems = [
   { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/members',       icon: Users,           label: 'Members' },
-  { to: '/savings',       icon: PiggyBank,       label: 'Savings' },
-  { to: '/loans',         icon: CreditCard,      label: 'Loans' },
+  { to: '/savings',           icon: PiggyBank,       label: 'Savings' },
+  { to: '/pending-requests',  icon: ClipboardList,   label: 'Pending requests' },
+  { to: '/loans',             icon: CreditCard,      label: 'Loans' },
   { to: '/reports',       icon: BarChart3,       label: 'Reports' },
   { to: '/audit',         icon: ShieldCheck,     label: 'Audit Trail' },
   { to: '/integrations',  icon: Radio,           label: 'Integrations' },

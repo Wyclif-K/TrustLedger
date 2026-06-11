@@ -76,7 +76,9 @@ export default function IntegrationsPage() {
             Replace <code className="text-surface-300">phoneNumber</code> with a registered member phone. Expect a <code className="text-surface-300">CON</code> or <code className="text-surface-300">END</code> plain-text menu response.
           </li>
           <li>
-            For carrier testing, point Africa&apos;s Talking USSD callback to your public HTTPS URL + <code className="text-xs bg-surface-100 px-1 rounded">/ussd</code> (e.g. via ngrok). See{' '}
+            For carrier testing, point Africa&apos;s Talking USSD callback to your public HTTPS URL:
+            <code className="text-xs bg-surface-100 px-1 rounded ml-1">/ussd-bridge/ussd</code> when the bridge is embedded on Railway (Dockerfile default), or{' '}
+            <code className="text-xs bg-surface-100 px-1 rounded">/ussd</code> on a standalone bridge (port 4000 / ngrok). See{' '}
             <a
               href="https://developers.africastalking.com/docs/ussd"
               target="_blank"

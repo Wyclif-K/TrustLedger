@@ -124,7 +124,9 @@ async function handleLoanApplication(sessionId, sess, input, phone) {
       // Send SMS confirmation (non-blocking)
       sms.loanApplicationReceived(phone, result.loanId, data.amount).catch(() => {});
 
-      return responses.loanSubmitted(result.loanId);
+      return end(
+        `Loan application\nsubmitted!\nRef: ${result.loanId.slice(-10)}\nAdmin will review\nbefore blockchain.`
+      );
 
     } catch (err) {
       logger.error('Loan application submission failed:', err.message);

@@ -118,3 +118,36 @@ enum NotificationChannel {
   SMS
   BOTH
 }
+
+// ─── Member Request (off-chain queue — admin approves before blockchain) ─────
+model MemberRequest {
+  id           String              @id @default(uuid())
+  memberId     String
+  type         MemberRequestType
+  status       MemberRequestStatus @default(PENDING)
+  amount       Float
+  reference    String              @unique
+  channel      String              // USSD, MOBILE_APP
+  metadata     Json?
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  rejectReason String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([memberId])
+  @@index([status])
+  @@index([type])
+  @@map("member_requests")
+}
+
+enum MemberRequestType {
+  SAVINGS_DEPOSIT
+  LOAN_REPAYMENT
+}
+
+enum MemberRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

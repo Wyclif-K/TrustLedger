@@ -26,6 +26,7 @@ const MENUS = {
     '3. Loan Status\n' +
     '4. Apply for Loan\n' +
     '5. Make Repayment\n' +
+    '6. Make Savings\n' +
     '0. Exit'
   ),
 
@@ -40,12 +41,12 @@ const MENUS = {
   ),
 
   ERROR_TIMEOUT: end(
-    'Session timed out.\nDial *234# to start again.'
+    'Session timed out.\nDial *384*13948#\nto start again.'
   ),
 
   INVALID_OPTION: con(
     'Invalid option.\nPlease try again:\n\n' +
-    '1. Balance\n2. Statement\n3. Loan\n4. Apply\n5. Repay\n0. Exit'
+    '1. Balance\n2. Stmt\n3. Loan\n4. Apply\n5. Repay\n6. Save\n0. Exit'
   ),
 };
 
@@ -137,7 +138,22 @@ const responses = {
 
   loanSubmitted: (loanId) =>
     end(
-      `Loan application\nsubmitted!\nRef: ${loanId.slice(-10)}\nAwaiting approval.`
+      `Loan application\nsubmitted!\nRef: ${loanId.slice(-10)}\nAdmin will review\nbefore blockchain.`
+    ),
+
+  // Savings deposit prompts
+  savingsAskAmount: () => con(
+    'Enter savings amount\nin UGX:\n(Min: 1,000\nMax: 50,000,000)'
+  ),
+
+  savingsConfirm: (amount) =>
+    con(
+      `Confirm Savings:\nAmt: ${formatAmount(amount)}\n\nNo mobile money.\nAdmin will approve.\n\n1. Submit\n2. Cancel`
+    ),
+
+  savingsSubmitted: (reference) =>
+    end(
+      `Savings request\nsubmitted!\nRef: ${reference.slice(-12)}\nAwaiting admin\napproval.`
     ),
 
   // Repayment prompts
@@ -149,6 +165,11 @@ const responses = {
   repayConfirm: (amount, loanId, outstanding) =>
     con(
       `Confirm Payment:\nAmt: ${formatAmount(amount)}\nLoan: ${loanId.slice(-10)}\nBal after: ${formatAmount(outstanding - amount)}\n\n1. Confirm\n2. Cancel`
+    ),
+
+  repaySubmitted: (amount, ref) =>
+    end(
+      `Repayment request\nsubmitted!\nAmt: ${formatAmount(amount)}\nRef: ${ref.slice(-12)}\nAwaiting admin\napproval.`
     ),
 
   repaySuccess: (amount, outstanding, ref) => {

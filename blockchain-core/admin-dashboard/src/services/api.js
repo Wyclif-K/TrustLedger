@@ -130,6 +130,11 @@ export const loansApi = {
 export const savingsApi = {
   overview: () => api.get('/savings'),
 }
+export const memberRequestsApi = {
+  list: (params) => api.get('/member-requests', { params }),
+  approve: (id) => api.post(`/member-requests/${id}/approve`),
+  reject: (id, data) => api.post(`/member-requests/${id}/reject`, data),
+}
 export const reportsApi = {
   dashboard: () => api.get('/reports/dashboard'),
   monthlyTrends: (params) => api.get('/reports/monthly-trends', { params }),

@@ -40,6 +40,9 @@ async function getMemberByPhone(req, res, next) {
       select: { memberId: true, fullName: true, phone: true, status: true },
     });
     if (!user) return sendError(res, 404, 'No member registered for this phone number.');
+    if (user.status !== 'ACTIVE') {
+      return sendError(res, 403, 'Your account is not active. Visit the branch.');
+    }
     return sendSuccess(res, {
       memberId: user.memberId,
       fullName: user.fullName,

@@ -16,6 +16,7 @@ import SavingsPage   from '@/pages/Savings'
 import ReportsPage   from '@/pages/Reports'
 import AuditPage       from '@/pages/Audit'
 import IntegrationsPage from '@/pages/Integrations'
+import PendingRequestsPage from '@/pages/PendingRequests'
 
 // ── Protected route wrapper ────────────────────────────────────────────────────
 function ProtectedRoute({ children }) {
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="members"            element={<MembersPage />} />
           <Route path="members/:memberId"  element={<MemberDetail />} />
           <Route path="savings"            element={<SavingsPage />} />
+          <Route path="pending-requests"   element={<PendingRequestsPage />} />
           <Route path="loans"              element={<LoansPage />} />
           <Route path="reports"            element={<ReportsPage />} />
           <Route path="audit"              element={<AuditPage />} />

@@ -81,25 +81,29 @@ async function handleRepayment(sessionId, sess, input, phone) {
       return end('Repayment cancelled.\nDial *234# to retry.');
     }
 
-    const reference = `USSD-${Date.now()}`;
+    const reference = `USSD-REPAY-${Date.now()}`;
 
     try {
-      const result = await backend.repayLoan(data.loanId, data.repayAmount, reference);
-
-      logger.info(
-        `Repayment: ${sess.memberId} → ${data.loanId} ` +
-        `UGX ${data.repayAmount} | outstanding: ${result.outstanding}`
+      const result = await backend.submitRepaymentRequest(
+        sess.memberId,
+        data.loanId,
+        data.repayAmount,
+        reference
       );
 
-      // Send SMS confirmation (non-blocking)
+      logger.info(
+        `Repayment request: ${sess.memberId} → ${data.loanId} ` +
+        `UGX ${data.repayAmount} ref ${result.reference}`
+      );
+
       sms.loanRepaymentConfirmed(
         phone,
         data.repayAmount,
-        result.outstanding,
+        data.outstandingBalance,
         reference
       ).catch(() => {});
 
-      return responses.repaySuccess(data.repayAmount, result.outstanding, reference);
+      return responses.repaySubmitted(data.repayAmount, reference);
 
     } catch (err) {
       logger.error('Repayment submission failed:', err.message);
