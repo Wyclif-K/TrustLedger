@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 
 const prisma = require('../services/db.service');
+const { memberRequestsTableReady } = require('../services/migrate.service');
 const config = require('../config');
 const fabricService = require('../services/fabric.service');
 
@@ -144,6 +145,13 @@ async function health(req, res) {
   try {
     await prisma.$queryRaw`SELECT 1`;
     body.database = 'up';
+    body.memberRequestsTable = (await memberRequestsTableReady()) ? 'ready' : 'missing';
+    if (body.memberRequestsTable === 'missing') {
+      body.success = false;
+      body.message =
+        'PostgreSQL is up but the member_requests table is missing. ' +
+        'Redeploy the API (migrations run on startup) or run: npx prisma migrate deploy.';
+    }
   } catch {
     body.database = 'down';
     body.success = false;
@@ -159,7 +167,7 @@ async function health(req, res) {
     }
   }
 
-  const httpStatus = body.database === 'up' ? 200 : 503;
+  const httpStatus = body.database === 'up' && body.memberRequestsTable !== 'missing' ? 200 : 503;
   if (httpStatus === 503) {
     return res.status(503).json({
       ...body,

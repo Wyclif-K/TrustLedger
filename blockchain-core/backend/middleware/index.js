@@ -158,6 +158,27 @@ function errorHandler(err, req, res, next) {
         'PostgreSQL is unreachable or DATABASE_URL is wrong. Fix the database on the machine that runs the API.'
       );
     }
+    if (err.code === 'P2021') {
+      const table = err.meta?.table || 'unknown';
+      logger.error(`Prisma P2021 missing table: ${table}`, { meta: err.meta });
+      return sendError(
+        res,
+        503,
+        `Database schema is out of date (missing table: ${table}). ` +
+          'Redeploy the API or run: npx prisma migrate deploy on the server.'
+      );
+    }
+    if (err.code === 'P2022') {
+      const column = err.meta?.column || 'unknown';
+      logger.error(`Prisma P2022 missing column: ${column}`, { meta: err.meta });
+      return sendError(
+        res,
+        503,
+        `Database schema is out of date (missing column: ${column}). ` +
+          'Redeploy the API or run: npx prisma migrate deploy on the server.'
+      );
+    }
+    logger.error(`Prisma error ${err.code}: ${err.message}`, { meta: err.meta });
     return sendError(res, 400, 'Database error.');
   }
 

@@ -19,6 +19,7 @@ const logger        = require('./config/logger');
 const fabricService = require('./services/fabric.service');
 const prisma        = require('./services/db.service');
 const atService     = require('./services/africastalking.service');
+const { applyDatabaseMigrations } = require('./services/migrate.service');
 
 let server;
 
@@ -89,7 +90,10 @@ async function start() {
     ]);
     logger.info('PostgreSQL connected.');
 
-    // ── 2. Start HTTP Server first (critical for Railway / reverse proxies)
+    // ── 2. Apply pending Prisma migrations (member_requests, etc.) ─────────
+    applyDatabaseMigrations();
+
+    // ── 3. Start HTTP Server first (critical for Railway / reverse proxies)
     server = app.listen(config.port, '0.0.0.0', () => {
       logger.info(`
 ╔══════════════════════════════════════════════════════╗

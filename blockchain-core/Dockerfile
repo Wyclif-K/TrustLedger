@@ -25,7 +25,8 @@ ENV ENABLE_ROTATE_FILE_LOG=false
 # Prisma generate does not need a live DB, only a syntactically valid URL.
 ENV DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/railway_build"
 COPY blockchain-core/backend/package.json blockchain-core/backend/package-lock.json ./
-RUN npm ci && npm cache clean --force
+# prisma CLI is required at runtime for migrate deploy (NODE_ENV=production omits devDependencies by default)
+RUN npm ci --include=dev && npm cache clean --force
 COPY blockchain-core/backend/ ./
 RUN npx prisma generate
 COPY --from=admin-build /build/admin-dashboard/dist ../admin-dashboard/dist
