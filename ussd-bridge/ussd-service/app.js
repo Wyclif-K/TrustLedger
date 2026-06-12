@@ -104,6 +104,8 @@ async function handleUssdWebhook(req, res) {
 app.post('/ussd', normalizeAtUssdBody, ipWhitelist, validateUssdPayload, handleUssdWebhook);
 app.post('/ussd/', normalizeAtUssdBody, ipWhitelist, validateUssdPayload, handleUssdWebhook);
 
+const ussdWebhookMiddleware = [normalizeAtUssdBody, ipWhitelist, validateUssdPayload];
+
 // ── Session debug (admin-only, disable in production) ─────────────────────────
 if (config.isDev) {
   app.get('/debug/session/:sessionId', async (req, res) => {
@@ -115,5 +117,8 @@ if (config.isDev) {
 // ── 404 + error handlers ──────────────────────────────────────────────────────
 app.use(notFound);
 app.use(errorHandler);
+
+app.handleUssdWebhook = handleUssdWebhook;
+app.ussdWebhookMiddleware = ussdWebhookMiddleware;
 
 module.exports = app;

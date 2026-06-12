@@ -141,8 +141,11 @@ copy .env.example .env
 | Deployment | Callback URL |
 |------------|--------------|
 | **Railway (embedded bridge)** | `https://YOUR-APP.up.railway.app/ussd-bridge/ussd` |
+| **Domain root only (works after fix, not recommended)** | `https://YOUR-APP.up.railway.app` — AT often saves only the host; TrustLedger now accepts USSD POST on `/` too |
 | **Standalone bridge + ngrok** | `https://xxxx.ngrok-free.app/ussd` |
 | **Legacy (not recommended)** | `https://YOUR-APP.up.railway.app/api/v1/ussd` |
+
+> **Important:** In the Africa's Talking dashboard, the Callback URL must **not** stop at the domain alone if you use an older deploy. Prefer the full path **`/ussd-bridge/ussd`**. A callback of only `https://trustledger-production-38cb.up.railway.app` caused "unfinished operation" because POST `/` returned JSON 404 instead of `CON`/`END`.
 
 Use the **embedded bridge** URL when deploying with `blockchain-core/Dockerfile` (`USSD_BRIDGE_EMBED=true`).
 

@@ -97,6 +97,23 @@ function normalizeUssdMountPath(p) {
 
 const ussdMountPrefix = normalizeUssdMountPath(config.ussdBridge.mountPath);
 
+function isUssdWebhookBody(body) {
+  if (!body || typeof body !== 'object') return false;
+  const sessionId = body.sessionId ?? body.SessionId;
+  const phoneNumber = body.phoneNumber ?? body.PhoneNumber;
+  return Boolean(sessionId && phoneNumber);
+}
+
+function runUssdWebhook(req, res, next, middleware, handler) {
+  let i = 0;
+  const step = (err) => {
+    if (err) return next(err);
+    if (i >= middleware.length) return handler(req, res);
+    middleware[i++](req, res, step);
+  };
+  step();
+}
+
 // ─── API routes ───────────────────────────────────────────────────────────────
 app.use(config.apiPrefix, routes);
 
@@ -106,6 +123,16 @@ if (config.ussdBridge.embed && fs.existsSync(ussdEmbedAppPath)) {
   const ussdApp = require('./ussd-service/app');
   app.use(mountAt, ussdApp);
   logger.info(`USSD bridge embedded at ${mountAt} (same origin as API)`);
+
+  // Africa's Talking "Callback URL" is often set to the domain root only (missing /ussd-bridge/ussd).
+  // Accept USSD POST on / as well as /ussd-bridge/ussd so the menu still loads.
+  if (ussdApp.handleUssdWebhook && ussdApp.ussdWebhookMiddleware) {
+    app.post('/', (req, res, next) => {
+      if (!isUssdWebhookBody(req.body)) return next();
+      logger.info('USSD webhook received on site root (update AT callback to /ussd-bridge/ussd)');
+      runUssdWebhook(req, res, next, ussdApp.ussdWebhookMiddleware, ussdApp.handleUssdWebhook);
+    });
+  }
 } else if (config.ussdBridge.embed && !fs.existsSync(ussdEmbedAppPath)) {
   logger.warn('USSD_BRIDGE_EMBED is true but ./ussd-service is missing — skipping embed (check Docker COPY)');
 }
