@@ -130,6 +130,8 @@ async function health(req, res) {
     africasTalking: at.configured ? 'configured' : 'not_configured',
     /** USSD bridge can call internal routes when USSD_SERVICE_KEY is set (no secret exposed here). */
     ussdInternalApi: config.ussdService.key ? 'configured' : 'not_configured',
+    /** Set this URL in Africa's Talking USSD channel (embedded bridge on Railway). */
+    ussdCallbackUrl: `${req.protocol}://${req.get('host')}${config.ussdBridge.mountPath.replace(/\/$/, '')}/ussd`,
     /** Safe channel metadata for the admin dashboard (no API keys). */
     channels: {
       africaSTalking: {

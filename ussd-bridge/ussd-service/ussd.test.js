@@ -144,10 +144,10 @@ describe('Option 1 — Check Balance', () => {
     expect(res.text).toMatch(/1,500,000|1\.5M/);
   });
 
-  test('unregistered phone shows error', async () => {
+  test('unregistered phone shows error on menu choice', async () => {
     const backend = require('./services/backend.service');
     backend.getMemberByPhone.mockResolvedValueOnce(null);
-    const res = await ussd({ phone: '+256700999999', text: '' });
+    const res = await ussd({ phone: '+256700999999', text: '1' });
     expect(res.text).toContain('END');
     expect(res.text).toMatch(/not registered|branch/i);
   });

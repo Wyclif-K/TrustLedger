@@ -187,6 +187,11 @@ function errorHandler(err, req, res, next) {
 }
 
 function notFoundHandler(req, res) {
+  const path = req.originalUrl || req.path || '';
+  if (path.includes('/ussd-bridge') || path.endsWith('/ussd')) {
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    return res.status(200).send('END USSD service unavailable. Check USSD_BRIDGE_EMBED and callback URL (/ussd-bridge/ussd).');
+  }
   sendError(res, 404, `Route not found: ${req.method} ${req.originalUrl}`);
 }
 

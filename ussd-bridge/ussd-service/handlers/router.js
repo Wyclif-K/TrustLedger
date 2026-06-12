@@ -56,11 +56,10 @@ async function routeUssdRequest({ sessionId, phoneNumber, text }) {
   // ── Load existing session ──────────────────────────────────────────────────
   let sess = await sessionStore.getSession(sessionId);
 
-  // ── First dial (depth 0): Show main menu ──────────────────────────────────
+  // ── First dial (depth 0): Show main menu immediately ───────────────────────
+  // Do not block on backend member lookup — carriers timeout (~8–15s) and show
+  // "unfinished operation" if the webhook is slow. Resolve member on menu choice.
   if (depth === 0) {
-    // Resolve member identity on every fresh dial
-    const member = await resolveMember(phoneNumber, sessionId);
-    if (!member) return MENUS.ERROR_NOT_REGISTERED;
     return MENUS.MAIN;
   }
 

@@ -83,6 +83,10 @@ function errorHandler(err, req, res, next) {
 
 // ── 404 handler ───────────────────────────────────────────────────────────────
 function notFound(req, res) {
+  if (req.path.startsWith('/ussd')) {
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    return res.status(200).send('END USSD route not found. Check Africa\'s Talking callback URL ends with /ussd');
+  }
   res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.originalUrl}` });
 }
 

@@ -52,12 +52,7 @@ async function handleUssd(req, res) {
   try {
     // ── Level 0: First dial (no input yet) ──────────────────────────────────
     if (!text || text === '') {
-      const memberId = await getMemberIdByPhone(phoneNumber);
-      if (!memberId) {
-        response = `END Your phone number is not registered. Visit the branch.`;
-      } else {
-        response = MENU.MAIN;
-      }
+      response = MENU.MAIN;
 
     // ── Level 1: Main menu choice ────────────────────────────────────────────
     } else if (level === 1) {
@@ -147,8 +142,8 @@ async function handleUssd(req, res) {
   }
 
   // Africa's Talking expects plain text, not JSON
-  res.set('Content-Type', 'text/plain');
-  res.send(response);
+  res.set('Content-Type', 'text/plain; charset=utf-8');
+  res.status(200).send(response);
 }
 
 // ─── Multi-Step Flow Handler ──────────────────────────────────────────────────

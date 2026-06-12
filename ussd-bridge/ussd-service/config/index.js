@@ -34,7 +34,16 @@ module.exports = {
   redis: {
     url:        optional('REDIS_URL', 'redis://localhost:6379'),
     /** When false, skip Redis entirely (in-memory sessions only). */
-    enabled:    optional('REDIS_ENABLED', 'true').toLowerCase() !== 'false',
+    enabled:    (() => {
+      const flag = optional('REDIS_ENABLED', '').toLowerCase();
+      if (flag === 'false') return false;
+      if (flag === 'true') return true;
+      // Production without REDIS_URL → skip localhost Redis probe (Railway has no local Redis)
+      if (optional('NODE_ENV', 'development') === 'production' && !process.env.REDIS_URL) {
+        return false;
+      }
+      return true;
+    })(),
     sessionTtl: parseInt10('REDIS_SESSION_TTL', 120),
   },
 

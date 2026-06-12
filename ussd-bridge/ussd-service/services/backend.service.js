@@ -12,10 +12,13 @@ const axios  = require('axios');
 const config = require('../config');
 const logger = require('../config/logger');
 
+const LOOKUP_TIMEOUT_MS = 5_000;
+const DEFAULT_TIMEOUT_MS = 10_000;
+
 // ── Axios instance ─────────────────────────────────────────────────────────────
 const api = axios.create({
   baseURL: config.backend.apiUrl,
-  timeout: 10_000,
+  timeout: DEFAULT_TIMEOUT_MS,
   headers: {
     'Content-Type':   'application/json',
     'X-Service-Key':  config.backend.apiKey,
@@ -45,10 +48,16 @@ const unwrap = (res) => res.data?.data;
 // ── Lookup member by phone number ─────────────────────────────────────────────
 async function getMemberByPhone(phone) {
   try {
-    const res = await api.get('/internal/ussd/members/by-phone', { params: { phone } });
+    const res = await api.get('/internal/ussd/members/by-phone', {
+      params:  { phone },
+      timeout: LOOKUP_TIMEOUT_MS,
+    });
     return unwrap(res);
   } catch (err) {
     if (err.response?.status === 404) return null;
+    if (err.response?.status === 503) {
+      logger.error('Backend USSD internal API not configured (USSD_SERVICE_KEY missing on API)');
+    }
     throw err;
   }
 }

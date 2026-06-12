@@ -23,6 +23,34 @@ const { applyDatabaseMigrations } = require('./services/migrate.service');
 
 let server;
 
+async function initEmbeddedUssdBridge() {
+  if (!config.ussdBridge.embed) return;
+  const fs = require('fs');
+  const path = require('path');
+  const ussdEmbedAppPath = path.join(__dirname, 'ussd-service', 'app.js');
+  if (!fs.existsSync(ussdEmbedAppPath)) {
+    logger.warn('USSD_BRIDGE_EMBED is true but ./ussd-service is missing — skipping embed init');
+    return;
+  }
+  try {
+    const sessionStore = require('./ussd-service/services/session.service');
+    await sessionStore.connect();
+    require('./ussd-service/services/sms.service').init();
+    const ussdCfg = require('./ussd-service/config');
+    if (!ussdCfg.backend.apiKey) {
+      logger.warn(
+        'BACKEND_API_KEY is empty — embedded USSD bridge cannot call /internal/ussd/* on the API. ' +
+          'Set BACKEND_API_KEY to the same value as USSD_SERVICE_KEY on Railway.'
+      );
+    }
+    logger.info(
+      'Embedded USSD bridge ready. Africa\'s Talking callback URL: POST {your-domain}/ussd-bridge/ussd'
+    );
+  } catch (err) {
+    logger.warn(`Embedded USSD bridge init: ${err.message}`);
+  }
+}
+
 /**
  * Railway / load balancers need the TCP listener up quickly.
  * Fabric gRPC to a unreachable VPS peer or slow external HTTP can otherwise block listen() → 502 "Application failed to respond".
@@ -93,7 +121,10 @@ async function start() {
     // ── 2. Apply pending Prisma migrations (member_requests, etc.) ─────────
     applyDatabaseMigrations();
 
-    // ── 3. Start HTTP Server first (critical for Railway / reverse proxies)
+    // ── 3. Embedded USSD bridge (Redis + SMS init before accepting traffic) ─
+    await initEmbeddedUssdBridge();
+
+    // ── 4. Start HTTP Server first (critical for Railway / reverse proxies)
     server = app.listen(config.port, '0.0.0.0', () => {
       logger.info(`
 ╔══════════════════════════════════════════════════════╗

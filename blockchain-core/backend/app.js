@@ -102,15 +102,6 @@ app.use(config.apiPrefix, routes);
 
 const ussdEmbedAppPath = path.join(__dirname, 'ussd-service', 'app.js');
 if (config.ussdBridge.embed && fs.existsSync(ussdEmbedAppPath)) {
-  setImmediate(async () => {
-    try {
-      const sessionStore = require('./ussd-service/services/session.service');
-      await sessionStore.connect();
-      require('./ussd-service/services/sms.service').init();
-    } catch (err) {
-      logger.warn(`USSD bridge embed init: ${err.message}`);
-    }
-  });
   const mountAt = ussdMountPrefix;
   const ussdApp = require('./ussd-service/app');
   app.use(mountAt, ussdApp);

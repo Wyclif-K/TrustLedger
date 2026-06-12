@@ -21,6 +21,9 @@ const { routeUssdRequest } = require('./handlers/router');
 const sessionStore = require('./services/session.service');
 const backend      = require('./services/backend.service');
 
+/** Africa's Talking / telcos typically abort the session after ~8–15s without a body. */
+const USSD_RESPONSE_BUDGET_MS = parseInt(process.env.USSD_RESPONSE_BUDGET_MS || '8000', 10);
+
 const app = express();
 
 // ── Security ──────────────────────────────────────────────────────────────────
@@ -74,30 +77,32 @@ app.get('/ussd', (req, res) => {
 });
 
 // ── USSD webhook (Africa's Talking / MTN / Airtel) ────────────────────────────
-app.post('/ussd',
-  normalizeAtUssdBody,
-  ipWhitelist,
-  validateUssdPayload,
-  async (req, res) => {
-    const { sessionId, phoneNumber, text = '', networkCode } = req.body;
+async function handleUssdWebhook(req, res) {
+  const { sessionId, phoneNumber, text = '', networkCode } = req.body;
 
-    logger.info(`↓ USSD: session=${sessionId} phone=${phoneNumber} net=${networkCode} text="${text}"`);
+  logger.info(`↓ USSD: session=${sessionId} phone=${phoneNumber} net=${networkCode} text="${text}"`);
 
-    let response;
-    try {
-      response = await routeUssdRequest({ sessionId, phoneNumber, text });
-    } catch (err) {
-      logger.error('Router threw unhandled error:', err.message);
-      response = 'END Service error. Please try again.';
-    }
-
-    logger.info(`↑ USSD: ${response.substring(0, 80)}${response.length > 80 ? '…' : ''}`);
-
-    // USSD responses must be plain text — never JSON
-    res.set('Content-Type', 'text/plain');
-    res.send(response);
+  let response;
+  try {
+    response = await Promise.race([
+      routeUssdRequest({ sessionId, phoneNumber, text }),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('USSD response budget exceeded')), USSD_RESPONSE_BUDGET_MS);
+      }),
+    ]);
+  } catch (err) {
+    logger.error('USSD handler error:', err.message);
+    response = 'END Service busy. Please try again shortly.';
   }
-);
+
+  logger.info(`↑ USSD: ${response.substring(0, 80)}${response.length > 80 ? '…' : ''}`);
+
+  res.set('Content-Type', 'text/plain; charset=utf-8');
+  res.status(200).send(response);
+}
+
+app.post('/ussd', normalizeAtUssdBody, ipWhitelist, validateUssdPayload, handleUssdWebhook);
+app.post('/ussd/', normalizeAtUssdBody, ipWhitelist, validateUssdPayload, handleUssdWebhook);
 
 // ── Session debug (admin-only, disable in production) ─────────────────────────
 if (config.isDev) {
