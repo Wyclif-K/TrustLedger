@@ -107,9 +107,13 @@ export default function IntegrationsStatus({ health, healthLoading }) {
 
       <Row
         label="Africa's Talking"
-        hint={at?.shortCode ? `Service code ${at.shortCode} · ${at.environment}` : 'SMS / production USSD callbacks.'}
+        hint={
+          at?.environment === 'sandbox'
+            ? `Sandbox (${at?.shortCode || 'no shortcode'}) — web simulator OK; real phones need a registered test SIM or Live AT.`
+            : (at?.shortCode ? `Service code ${at.shortCode} · ${at.environment}` : 'SMS / production USSD callbacks.')
+        }
       >
-        <StateIcon kind={atKind} />
+        <StateIcon kind={at?.environment === 'sandbox' ? 'warn' : atKind} />
         <span className="text-surface-600">
           {healthLoading ? '…'
             : health?.africasTalking === 'configured'
@@ -145,6 +149,14 @@ export default function IntegrationsStatus({ health, healthLoading }) {
               )}
         </span>
       </Row>
+
+      {Array.isArray(health?.ussdWarnings) && health.ussdWarnings.length > 0 && (
+        <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed">
+          {health.ussdWarnings.map((w) => (
+            <p key={w}>{w}</p>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -443,7 +443,7 @@ GET http://localhost:4000/health      (local standalone bridge)
 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
-| **"Unfinished operation"** on dial | AT callback URL wrong, server unreachable, or webhook too slow | Set AT callback to `https://YOUR-APP.up.railway.app/ussd-bridge/ussd` (HTTPS, exact path). Check `/api/v1/health` shows `ussdCallbackUrl`. Redeploy after setting `USSD_SERVICE_KEY` + `BACKEND_API_KEY`. |
+| **"Unfinished operation"** on dial | AT callback URL wrong, server unreachable, webhook too slow, or **AT still in sandbox** | Set AT callback to `https://YOUR-APP.up.railway.app/ussd-bridge/ussd`. Check Railway logs when you dial — if no `↓ USSD` log line, the request never reached your server (sandbox/telco issue). In sandbox: add your SIM under **AT dashboard → Sandbox → Phone numbers**. For any customer to dial: use a **Live** AT app + telco-provisioned shortcode. |
 | "Network error" when dialing | Callback URL wrong or server not public | Set AT callback to correct HTTPS `/ussd-bridge/ussd` URL |
 | `END Your number is not registered` | Phone not in DB or inactive | Register member with exact SIM phone |
 | Menu shows, balance fails | Fabric down or member not on chain | Start Fabric; register member via admin |

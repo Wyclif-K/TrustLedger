@@ -66,9 +66,11 @@ async function connect() {
       redisUrl.startsWith('rediss://')
         ? {
             tls:               true,
+            connectTimeout:    3_000,
             reconnectStrategy: () => false,
           }
         : {
+            connectTimeout:    3_000,
             reconnectStrategy: () => false,
           };
 

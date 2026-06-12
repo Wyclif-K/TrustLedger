@@ -60,6 +60,12 @@ async function routeUssdRequest({ sessionId, phoneNumber, text }) {
   // Do not block on backend member lookup — carriers timeout (~8–15s) and show
   // "unfinished operation" if the webhook is slow. Resolve member on menu choice.
   if (depth === 0) {
+    // Warm member cache in background so option 1 is faster on the next POST.
+    setImmediate(() => {
+      resolveMember(phoneNumber, sessionId).catch((err) => {
+        logger.debug(`Member prefetch: ${err.message || 'skipped'}`);
+      });
+    });
     return MENUS.MAIN;
   }
 

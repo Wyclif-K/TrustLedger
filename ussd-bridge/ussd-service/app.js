@@ -78,6 +78,7 @@ app.get('/ussd', (req, res) => {
 
 // ── USSD webhook (Africa's Talking / MTN / Airtel) ────────────────────────────
 async function handleUssdWebhook(req, res) {
+  const started = Date.now();
   const { sessionId, phoneNumber, text = '', networkCode } = req.body;
 
   logger.info(`↓ USSD: session=${sessionId} phone=${phoneNumber} net=${networkCode} text="${text}"`);
@@ -95,7 +96,7 @@ async function handleUssdWebhook(req, res) {
     response = 'END Service busy. Please try again shortly.';
   }
 
-  logger.info(`↑ USSD: ${response.substring(0, 80)}${response.length > 80 ? '…' : ''}`);
+  logger.info(`↑ USSD: ${response.substring(0, 80)}${response.length > 80 ? '…' : ''} (${Date.now() - started}ms)`);
 
   res.set('Content-Type', 'text/plain; charset=utf-8');
   res.status(200).send(response);

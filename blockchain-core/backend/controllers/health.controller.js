@@ -140,8 +140,11 @@ async function health(req, res) {
         shortCode:     at.shortCode || null,
         smsFrom:       at.smsFrom || null,
         environment:   String(at.apiBaseUrl || '').includes('sandbox') ? 'sandbox' : 'production',
+        /** Web simulator works in sandbox; real handsets need a registered test SIM or Live AT + telco USSD. */
+        realPhoneUssdReady: !String(at.apiBaseUrl || '').includes('sandbox'),
       },
     },
+    ussdWarnings: [],
   };
 
   try {
@@ -167,6 +170,15 @@ async function health(req, res) {
     if (!probe.reachable && probe.detail) {
       body.fabricDetail = probe.detail;
     }
+  }
+
+  const atEnv = body.channels?.africaSTalking?.environment;
+  if (atEnv === 'sandbox') {
+    body.ussdWarnings.push(
+      'Africa\'s Talking is in SANDBOX mode. The AT web simulator works, but real phones often show ' +
+        '"Unfinished operation" until you (1) add the SIM as a sandbox test number in the AT dashboard, or ' +
+        '(2) switch to a Live AT app with a telco-provisioned USSD shortcode.'
+    );
   }
 
   const httpStatus = body.database === 'up' && body.memberRequestsTable !== 'missing' ? 200 : 503;

@@ -34,22 +34,26 @@ async function initEmbeddedUssdBridge() {
   }
   try {
     const sessionStore = require('./ussd-service/services/session.service');
-    await sessionStore.connect();
-    require('./ussd-service/services/sms.service').init();
     const ussdCfg = require('./ussd-service/config');
-    if (!ussdCfg.backend.apiKey && String(process.env.USSD_EMBED_DIRECT || '').toLowerCase() !== 'true') {
-      logger.warn(
-        'BACKEND_API_KEY is empty — embedded USSD bridge cannot call /internal/ussd/* on the API. ' +
-          'Set BACKEND_API_KEY to the same value as USSD_SERVICE_KEY on Railway, or USSD_EMBED_DIRECT=true.'
+    // Do not block app.listen on Redis — telco USSD needs the server up quickly.
+    void sessionStore.connect().then(() => {
+      require('./ussd-service/services/sms.service').init();
+      if (!ussdCfg.backend.apiKey && String(process.env.USSD_EMBED_DIRECT || '').toLowerCase() !== 'true') {
+        logger.warn(
+          'BACKEND_API_KEY is empty — embedded USSD bridge cannot call /internal/ussd/* on the API. ' +
+            'Set BACKEND_API_KEY to the same value as USSD_SERVICE_KEY on Railway, or USSD_EMBED_DIRECT=true.'
+        );
+      }
+      const direct = String(process.env.USSD_EMBED_DIRECT || '').toLowerCase();
+      if (direct === 'true' || direct === '1') {
+        logger.info('USSD_EMBED_DIRECT=true — bridge uses in-process backend (no Bearer / no HTTP to /members)');
+      }
+      logger.info(
+        'Embedded USSD bridge ready. Africa\'s Talking callback URL: POST {your-domain}/ussd-bridge/ussd'
       );
-    }
-    const direct = String(process.env.USSD_EMBED_DIRECT || '').toLowerCase();
-    if (direct === 'true' || direct === '1') {
-      logger.info('USSD_EMBED_DIRECT=true — bridge uses in-process backend (no Bearer / no HTTP to /members)');
-    }
-    logger.info(
-      'Embedded USSD bridge ready. Africa\'s Talking callback URL: POST {your-domain}/ussd-bridge/ussd'
-    );
+    }).catch((err) => {
+      logger.warn(`Embedded USSD bridge init: ${err.message}`);
+    });
   } catch (err) {
     logger.warn(`Embedded USSD bridge init: ${err.message}`);
   }
@@ -125,8 +129,8 @@ async function start() {
     // ── 2. Apply pending Prisma migrations (member_requests, etc.) ─────────
     applyDatabaseMigrations();
 
-    // ── 3. Embedded USSD bridge (Redis + SMS init before accepting traffic) ─
-    await initEmbeddedUssdBridge();
+    // ── 3. Embedded USSD bridge (Redis + SMS init — non-blocking) ───────────
+    void initEmbeddedUssdBridge();
 
     // ── 4. Start HTTP Server first (critical for Railway / reverse proxies)
     server = app.listen(config.port, '0.0.0.0', () => {
