@@ -9,6 +9,7 @@ const { body } = require('express-validator');
 const authService    = require('../services/auth.service');
 const fabricService  = require('../services/fabric.service');
 const prisma         = require('../services/db.service');
+const { normalizePhoneE164 } = require('../utils/phone');
 const { sendSuccess, sendCreated, sendError } = require('../utils/response');
 const config         = require('../config');
 const logger         = require('../config/logger');
@@ -70,7 +71,8 @@ function isLedgerMemberMissingError(err) {
 
 async function register(req, res, next) {
   try {
-    const { memberId, fullName, email, phone, nationalId, password, role = 'MEMBER' } = req.body;
+    const { memberId, fullName, email, phone: rawPhone, nationalId, password, role = 'MEMBER' } = req.body;
+    const phone = normalizePhoneE164(rawPhone) || String(rawPhone || '').trim();
 
     // 0. If this ID already exists on the ledger, fail fast with a clear message (avoids vague endorse errors)
     try {

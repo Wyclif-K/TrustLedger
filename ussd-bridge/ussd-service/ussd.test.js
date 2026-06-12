@@ -151,6 +151,14 @@ describe('Option 1 — Check Balance', () => {
     expect(res.text).toContain('END');
     expect(res.text).toMatch(/not registered|branch/i);
   });
+
+  test('local format 07… is normalized before member lookup', async () => {
+    const backend = require('./services/backend.service');
+    backend.getMemberByPhone.mockClear();
+    const res = await ussd({ sessionId: 'sess-local-001', phone: '0784398905', text: '1' });
+    expect(backend.getMemberByPhone).toHaveBeenCalledWith('+256784398905');
+    expect(res.text).toContain('END');
+  });
 });
 
 // =============================================================================

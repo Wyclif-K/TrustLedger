@@ -5,6 +5,7 @@
 'use strict';
 
 const logger = require('../config/logger');
+const { normalizePhoneE164 } = require('../utils/phone');
 
 // ── Request logger ────────────────────────────────────────────────────────────
 function requestLogger(req, res, next) {
@@ -43,9 +44,12 @@ function validateUssdPayload(req, res, next) {
     return res.status(200).send('END Invalid request.');
   }
 
-  // Normalise phone: ensure it starts with +
-  if (!req.body.phoneNumber.startsWith('+')) {
-    req.body.phoneNumber = `+${req.body.phoneNumber}`;
+  // Normalise phone to E.164 (078… → +256…, not +078…)
+  const normalized = normalizePhoneE164(phoneNumber);
+  if (normalized) {
+    req.body.phoneNumber = normalized;
+  } else if (!String(phoneNumber).startsWith('+')) {
+    req.body.phoneNumber = `+${String(phoneNumber).replace(/\D/g, '')}`;
   }
 
   next();

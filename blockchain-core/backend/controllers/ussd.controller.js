@@ -16,7 +16,7 @@
 'use strict';
 
 const fabricService = require('../services/fabric.service');
-const prisma        = require('../services/db.service');
+const { findMemberByPhone } = require('../services/member-phone.service');
 const logger        = require('../config/logger');
 const {
   createSavingsDepositRequest,
@@ -275,35 +275,9 @@ async function handleFlow(session, inputs, sessionId, phoneNumber) {
 }
 
 // ─── Lookup Member ID by Phone ────────────────────────────────────────────────
-/** Africa's Talking may send +256…, 256…, or local 07… — match how users were stored in PostgreSQL. */
-function phoneLookupVariants(raw) {
-  const s = raw == null ? '' : String(raw).trim().replace(/\s/g, '');
-  if (!s) return [];
-  const v = new Set();
-  v.add(s);
-  if (s.startsWith('+')) v.add(s.slice(1));
-  else if (/^\d+$/.test(s)) v.add(`+${s}`);
-  const digits = s.replace(/\D/g, '');
-  if (digits.length >= 9) {
-    v.add(digits);
-    v.add(`+${digits}`);
-  }
-  if (/^0\d{9,14}$/.test(digits)) {
-    const intl = `256${digits.slice(1)}`;
-    v.add(intl);
-    v.add(`+${intl}`);
-  }
-  return [...v];
-}
-
 async function getMemberIdByPhone(phone) {
-  const variants = phoneLookupVariants(phone);
-  if (variants.length === 0) return null;
   try {
-    const user = await prisma.user.findFirst({
-      where:  { phone: { in: variants } },
-      select: { memberId: true, status: true },
-    });
+    const user = await findMemberByPhone(phone);
     if (!user || user.status !== 'ACTIVE') return null;
     return user.memberId;
   } catch {

@@ -55,6 +55,11 @@ async function getMemberByPhone(phone) {
     return unwrap(res);
   } catch (err) {
     if (err.response?.status === 404) return null;
+    if (err.response?.status === 403) {
+      const e = new Error(err.response?.data?.message || 'Account not active');
+      e.code = 'INACTIVE';
+      throw e;
+    }
     if (err.response?.status === 503) {
       logger.error('Backend USSD internal API not configured (USSD_SERVICE_KEY missing on API)');
     }

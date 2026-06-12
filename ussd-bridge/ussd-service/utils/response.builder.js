@@ -40,6 +40,14 @@ const MENUS = {
     'Your number is not\nregistered with us.\nVisit the branch to register.'
   ),
 
+  ERROR_INACTIVE: end(
+    'Your account is\nnot active.\nVisit the branch for help.'
+  ),
+
+  ERROR_SERVICE: end(
+    'Service temporarily\nunavailable.\nTry again shortly.'
+  ),
+
   ERROR_TIMEOUT: end(
     'Session timed out.\nDial *384*13948#\nto start again.'
   ),

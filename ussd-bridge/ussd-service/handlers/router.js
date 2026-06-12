@@ -65,8 +65,10 @@ async function routeUssdRequest({ sessionId, phoneNumber, text }) {
 
   // ── Ensure member is resolved in session ──────────────────────────────────
   if (!sess || !sess.memberId) {
-    const member = await resolveMember(phoneNumber, sessionId);
-    if (!member) return MENUS.ERROR_NOT_REGISTERED;
+    const resolved = await resolveMember(phoneNumber, sessionId);
+    if (resolved.error === 'NOT_REGISTERED') return MENUS.ERROR_NOT_REGISTERED;
+    if (resolved.error === 'INACTIVE') return MENUS.ERROR_INACTIVE;
+    if (resolved.error === 'SERVICE') return MENUS.ERROR_SERVICE;
     sess = await sessionStore.getSession(sessionId);
   }
 
@@ -118,11 +120,11 @@ async function resolveMember(phone, sessionId) {
     const member = await backend.getMemberByPhone(phone);
     if (!member) {
       logger.warn(`Unregistered phone: ${phone}`);
-      return null;
+      return { error: 'NOT_REGISTERED' };
     }
     if (member.status && member.status !== 'ACTIVE') {
       logger.warn(`Inactive member phone: ${phone} status=${member.status}`);
-      return null;
+      return { error: 'INACTIVE' };
     }
     await sessionStore.setSession(sessionId, {
       phone,
@@ -130,10 +132,11 @@ async function resolveMember(phone, sessionId) {
       fullName: member.fullName,
     });
     logger.debug(`Member resolved: ${phone} → ${member.memberId}`);
-    return member;
+    return { member };
   } catch (err) {
     logger.error(`Member resolution failed for ${phone}: ${err.message}`);
-    return null;
+    if (err.code === 'INACTIVE') return { error: 'INACTIVE' };
+    return { error: 'SERVICE' };
   }
 }
 
