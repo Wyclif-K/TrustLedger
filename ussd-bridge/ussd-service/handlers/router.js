@@ -68,6 +68,7 @@ async function routeUssdRequest({ sessionId, phoneNumber, text }) {
     const resolved = await resolveMember(phoneNumber, sessionId);
     if (resolved.error === 'NOT_REGISTERED') return MENUS.ERROR_NOT_REGISTERED;
     if (resolved.error === 'INACTIVE') return MENUS.ERROR_INACTIVE;
+    if (resolved.error === 'AUTH_CONFIG') return MENUS.ERROR_USSD_CONFIG;
     if (resolved.error === 'SERVICE') return MENUS.ERROR_SERVICE;
     sess = await sessionStore.getSession(sessionId);
   }
@@ -136,6 +137,7 @@ async function resolveMember(phone, sessionId) {
   } catch (err) {
     logger.error(`Member resolution failed for ${phone}: ${err.message}`);
     if (err.code === 'INACTIVE') return { error: 'INACTIVE' };
+    if (err.code === 'AUTH_CONFIG') return { error: 'AUTH_CONFIG' };
     return { error: 'SERVICE' };
   }
 }

@@ -13,11 +13,15 @@ const smsService   = require('./services/sms.service');
 let server;
 
 function logStartupConfigWarnings() {
-  if (!config.backend.apiKey) {
+  const direct = String(process.env.USSD_EMBED_DIRECT || '').toLowerCase();
+  if (!config.backend.apiKey && direct !== 'true' && direct !== '1') {
     logger.warn(
       'BACKEND_API_KEY is empty — bridge cannot call /internal/ussd/* on the API. ' +
-        'Set the same value as USSD_SERVICE_KEY in blockchain-core/backend/.env'
+        'Set the same value as USSD_SERVICE_KEY in blockchain-core/backend/.env, or USSD_EMBED_DIRECT=true.'
     );
+  }
+  if (direct === 'true' || direct === '1') {
+    logger.info('USSD_EMBED_DIRECT=true — in-process backend (no Bearer token on /members)');
   }
   if (!config.africastalking.apiKey) {
     logger.warn('AT_API_KEY is empty — SMS confirmations disabled (USSD menus still work).');

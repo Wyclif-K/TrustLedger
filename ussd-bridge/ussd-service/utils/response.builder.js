@@ -48,6 +48,10 @@ const MENUS = {
     'Service temporarily\nunavailable.\nTry again shortly.'
   ),
 
+  ERROR_USSD_CONFIG: end(
+    'USSD backend not\nconfigured.\nAdmin: set USSD_SERVICE_KEY\n= BACKEND_API_KEY on server.'
+  ),
+
   ERROR_TIMEOUT: end(
     'Session timed out.\nDial *384*13948#\nto start again.'
   ),

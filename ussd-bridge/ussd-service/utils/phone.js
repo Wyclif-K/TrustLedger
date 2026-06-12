@@ -29,8 +29,18 @@ function normalizePhoneE164(raw) {
 
 function phoneLookupVariants(raw) {
   const out = new Set();
+  const s = String(raw || '').trim().replace(/[\s\-().]/g, '');
+  if (!s) return [];
+
+  const d = digitsOnly(s);
   const e164 = normalizePhoneE164(raw);
 
+  out.add(s);
+  if (s.startsWith('+')) out.add(s.slice(1));
+  if (d) {
+    out.add(d);
+    out.add(`+${d}`);
+  }
   if (e164) {
     out.add(e164);
     out.add(e164.slice(1));
@@ -46,13 +56,8 @@ function phoneLookupVariants(raw) {
       out.add(`0${national}`);
       out.add(`254${national}`);
     }
-    return [...out].filter(Boolean);
   }
 
-  const s = String(raw || '').trim().replace(/[\s\-().]/g, '');
-  const d = digitsOnly(raw);
-  if (s) out.add(s);
-  if (d) out.add(d);
   return [...out].filter(Boolean);
 }
 
